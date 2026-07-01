@@ -1002,7 +1002,9 @@ function listaPaises(s0,s1){
 
 function omitirPais(area,s0,s1,s2){
 	// '-' y '.' son ubicaciones vacias (people.private): se muestran solo si no
-	// hay ningun filtro activo; con filtro se omiten.
+	// hay ningun filtro activo; con filtro se omiten. Excepcion: si el propio
+	// filtro de area pedido es '-', no se debe ocultar ese grupo.
+	if (s0=='-'){return false}
 	return (area=='-'||area=='.') && (s0!=''||s1!=''||s2!='');
 }
 
