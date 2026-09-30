@@ -230,13 +230,10 @@ a#link{
 <script id='fuente1' src='publicEvent.out.js'></script>
 <script id='fuente2' src='publicPeople.out.js'></script>
 <script id='fuente3' src='privatePeople.out.js'></script>
+<!-- favoritos.js se carga bajo demanda: cargaFavoritos() -->
+
 
 <script>
-// ---------------------------------------------------------------------------
-// OnlyTangoInfo: web estatica que lista eventos y gente de tango.
-// Los datos llegan en *.out.js como arrays de 8 campos (indices colX).
-// Tres vistas: countries (todo), annual (eventos EVT con fecha) y regular (REG).
-// ---------------------------------------------------------------------------
 
 // indices de los 8 campos de cada fila de datos
 const colArea=0;
@@ -314,23 +311,31 @@ function inicio(){
 		colorTipo.set('event encuentro','#7db1ff');
 		colorTipo.set('event marathon','#acccfc');
 		colorTipo.set('event championship','#ff6961');
-		colorTipo.set('dj','#db94ff');
-		colorTipo.set('artist','#e4ddff');
-		colorTipo.set('organizer','#ebc4ff');
-		colorTipo.set('writer','#f9fea0');
+		// roles públicos de people (ROLES_PUBLICOS en comun.py)
+		colorTipo.set('art','#e4ddff');
+		colorTipo.set('ptc2026','#ffe0b3');
+		colorTipo.set('org','#ebc4ff');
+		colorTipo.set('djm','#db94ff');
+		colorTipo.set('wrt','#f9fea0');
 	}
 	if(app=='people'){
-		datos=privatePeople.concat(publicPeople);
+		datos=privatePeople;   // privado contiene a todos; publicPeople es un subconjunto
 		titulo1=`People &#128518; `;
 		titulo2='';
-		colorTipo.set('dj','#db94ff');
-		colorTipo.set('artist','#e4adff');
-		colorTipo.set('organizer','#ccffcc');
-		colorTipo.set('tanguera','#ffccff');
-		colorTipo.set('tanguero','#ffcccc');
-		colorTipo.set('writer','#F9EE90');
-		colorTipo.set('adviser','#F9AA90');
-		colorTipo.set('shopper','#cfe8ff');
+		// roles (ROLES_VALIDOS en comun.py): públicos
+		colorTipo.set('art','#e4adff');
+		colorTipo.set('ptc2026','#ffe0b3');
+		colorTipo.set('org','#ccffcc');
+		colorTipo.set('djm','#db94ff');
+		colorTipo.set('wrt','#F9EE90');
+		// privados
+		colorTipo.set('mil','#ffccff');
+		colorTipo.set('com','#ffcccc');
+		colorTipo.set('vip','#ff9999');
+		colorTipo.set('dan','#cfe8ff');
+		colorTipo.set('tch','#b3f0e0');
+		colorTipo.set('inf','#F9AA90');
+		colorTipo.set('non','#e0e0e0');
 	}
 	datosAll=datos;
 
@@ -361,6 +366,7 @@ function inicio(){
 	results.style.marginTop='10px';
 	body.appendChild(results);
 	renderGo();
+	cargaFavoritos();
 	borraParametros();
 }
 
@@ -449,10 +455,64 @@ function crearSel1(){
 	return select;
 }
 
+// ── Favoritos (favoritos.js, opcional) ──
+// Misma regla que clave_evento() en paso1-merge.sh: palabras del nombre sin
+// relleno, genero (tango, marathon...) ni numeros/años, ordenadas, + ciudad.
+const FAV_ICONO={home:'&#128726;',go:'&#128522;',think:'&#129300;',moreinfo:'&#10067;'};
+const FAV_STOP=new Set(['tango','practica','pratik','serata','festival','marathon','maratona','club','encuentro']);
+const FAV_RELLENO=new Set(('de del la el los las lo un una unos unas al y e o u the a an and of in on at to for with by or '+
+	'le les du des une et aux au sur dans avec di da il i gli con per della dei der die das und mit im fur von zur zum '+
+	'en com do dos na no edition edicion ed vol part').split(' '));
+
+function normalizarFav(s){
+	// Copia de normalizar() de comun.py
+	s=String(s).replace(/\(.*?\)/g,' ').trim().toLowerCase().normalize('NFD').replace(/\p{Mn}/gu,'');
+	s=s.replace(/[^\p{L}\p{N}_\s]/gu,' ').replace(/[^\x00-\x7f]/g,'');
+	return s.replace(/\s+/g,' ').trim();
+}
+
+function claveFav(nombre,ciudad){
+	const p=[...new Set(normalizarFav(nombre).split(' ').filter(w =>
+		w && !FAV_RELLENO.has(w) && !FAV_STOP.has(w) && !/^\d/.test(w)))].sort();
+	return p.join(' ')+'|'+normalizarFav(ciudad);
+}
+
+const favMapa=new Map();
+
+function cargaFavoritos(){
+	// Carga favoritos.js en local (file:) o, en la web, solo con ?fav en la
+	// url. Si no existe, no pasa nada: el listado queda como sin favoritos.
+	if (parametros.fav==undefined && location.protocol!='file:'){return}
+	const s=document.createElement('script');
+	s.src='favoritos.js';
+	s.onload=function(){
+		// favoritos.js: filas [nombre, ciudad, estado]
+		for (const [n,c,estado] of favoritos){
+			favMapa.set(claveFav(n,c||''),estado);
+		}
+		renderGo();
+	};
+	document.head.appendChild(s);
+}
+
+function iconoFav(nombre,ciudad){
+	// Emoji del estado del favorito (con espacio detras) o '' si no lo es.
+	const e=favMapa.get(claveFav(nombre,ciudad));
+	return e ? '<span title="'+e+'">'+(FAV_ICONO[e]||'&#11088;')+'</span>&nbsp;' : '';
+}
+
 function esc(s){
 	// Escapa &, < y > de un texto antes de meterlo en innerHTML (evita romper
 	// el maquetado o inyectar HTML desde los datos).
 	return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function spanRoles(tipo){
+	// Lista de roles ('org,art,ptc2026') con una etiqueta de color por rol
+	// (colorTipo, gris si no está); las comas van sin color.
+	return String(tipo).split(',').map(r => r.trim()).filter(r => r && r!='-').map(r =>
+		'<span style="background-color:'+(colorTipo.get(r)||'#DDD')+'">'+esc(r)+'</span>'
+	).join(',');
 }
 
 function opTxt(t,n){
@@ -733,12 +793,18 @@ function prefijoVista(){
 	return '';
 }
 
-const rolesPeople=['dj','artist','organizer','writer','shopper','adviser','tanguera','tanguero'];
+const rolesPeople=['art','ptc2026','org','djm','wrt'];   // ROLES_PUBLICOS en comun.py
+
+function ocultoEnAnual(tipo){
+	// Tipos que no se muestran en la vista annual (ni lista, ni contadores).
+	return String(tipo).indexOf('seminar')!=-1;
+}
 
 function filaEnVista(fila,pref){
 	// true si la fila pertenece a la vista activa (REG/EVT comparan el
-	// prefijo de fecha; '' acepta todas).
+	// prefijo de fecha; '' acepta todas). En annual (EVT) omite los seminar.
 	if (pref==''){return true}
+	if (pref=='EVT' && ocultoEnAnual(fila[colTipo])){return false}
 	return String(fila[colFecha]).split('.')[0]==pref;
 }
 
@@ -830,6 +896,7 @@ function cuentaTipoEVT(){
 		if (f=='-' || f==''){continue}
 		if (f.split('.')[0]!='EVT'){continue}
 		let t=datos[i][colTipo];
+		if (ocultoEnAnual(t)){continue}
 		if (t!=''){ m.set(t,(m.get(t)||0)+1); }
 	}
 	return m;
@@ -843,9 +910,11 @@ function cuentaFechas(){
 	let s1=valorVisible('selector1');
 	let s2=valorVisible('selector2');
 	let s3=valorVisible('selector3');
+	const anual=(prefijoVista()=='EVT');
 	const m=new Map();
 	for (let i=0;i<datos.length;i++){
 		let d=datos[i];
+		if (anual && ocultoEnAnual(d[colTipo])){continue}
 		if (s0!='' && s0!='all' && d[colArea]!=s0){continue}
 		if (s1!='' && s1!='all' && d[colPais]!=s1){continue}
 		if (s2!='' && s2!='all' && d[colCiudad]!=s2){continue}
@@ -1196,8 +1265,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 			let span1='';
 			if (item.tipo!=''&&item.tipo!='-'){
 				if (app=='people'){
-					let color=colorTipo.get(item.tipo.split(',')[0].trim())||'#DDD';
-					span1='<span style="background-color:'+color+'">'+esc(item.tipo)+'</span>';
+					span1=spanRoles(item.tipo);
 				}else{
 					let t0=item.tipo.split(' ')[0];
 					if (t0=='event'||t0=='venue'||t0=='milonga'){
@@ -1206,8 +1274,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 						let tmp=get3(item.tipo);
 						span1='<span class="stipo" style="background-color:'+color+'">'+tmp+'</span>';
 					}else{
-						let color=colorTipo.get(item.tipo.split(',')[0].trim())||'#DDD';
-						span1='<span style="background-color:'+color+'">'+esc(item.tipo)+'</span>';
+						span1=spanRoles(item.tipo);
 					}
 				}
 			}
@@ -1227,10 +1294,17 @@ function renderCountries(s0,s1,s2,s3,s4){
 
 			let span4='';
 			if (item.fechas!=''&&item.fechas!='-'){
+				// campo 6: fecha EVT/REG en eventos; comentario o urls en people
 				let tmp=item.fechas;
 				let prt=tmp.split('.');
-				tmp=prt[2]+'.'+prt[4];
-				span4='<div class="itemLinea">'+tmp+'</div>';
+				if (prt[0]=='EVT' || prt[0]=='REG'){
+					span4='<div class="itemLinea">'+prt[2]+'.'+prt[4]+'</div>';
+				}else if (/^https?:\/\//.test(tmp)){
+					span4=tmp.split(/\s+/).filter(u => /^https?:\/\//.test(u)).map(u =>
+						'<a href="'+u.replace(/"/g,'%22')+'" target="_blank">&#9654;</a>').join(' ');
+				}else{
+					span4='<div class="itemLinea">'+esc(tmp)+'</div>';
+				}
 			}
 			if (app=='people'){
 				item.texto=span2+' : '+esc(item.nombre)+' : '+span1.replace('event ','')+
@@ -1238,8 +1312,9 @@ function renderCountries(s0,s1,s2,s3,s4){
 				span.innerHTML=item.texto;
 			}else{
 				let scity=item.ciudad!='' ? esc(item.ciudad)+',&nbsp;' : '';
+				const fav=String(item.tipo).startsWith('event') ? iconoFav(item.nombre,item.ciudad) : '';
 				item.texto=span1.replace('event','').trim()+'&nbsp;'+scity+
-				esc(item.nombre)+',&nbsp;'+span3+'('+span4+')';
+				fav+esc(item.nombre)+',&nbsp;'+span3+'('+span4+')';
 				span.innerHTML=item.texto;
 			}
 
@@ -1302,6 +1377,7 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 		let o=getObj(i);
 		let regular=o.fechas.split('.')[0];
 		if ( regular!='EVT' ){continue}
+		if (ocultoEnAnual(o.tipo)){continue}
 
 		let fechas=o.fechas;
 		if ( fechas=='-' || fechas=='' ){continue}
@@ -1312,6 +1388,9 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 		const dia=o.fechas.split('.')[3].split('-')[0];
 		if (new Date(year,mes,dia)<actual){ year=actual.getFullYear(); }
 		if (new Date(year,mes,dia)<actual){ year++; }
+		// arrastrado: la edición publicada ya pasó y se repite en el año
+		// siguiente hasta que exista la nueva (fecha estimada)
+		o.estimado=(String(year)!=o.fechas.split('.')[4]);
 		const f3=new Date(year,mes,dia);
 		o.ofecha=f3;
 		o.colorMes=mes;
@@ -1390,9 +1469,10 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 		if (nombre.length>corte){
 			nombre=nombre.substring(0,corte)+' ..';
 		}
-		let snombre='<span>'+esc(nombre)+'</span>';
+		let snombre='<span>'+iconoFav(item.nombre,item.ciudad)+esc(nombre)+'</span>';
 
-		item.texto=sfecha+stipo+'&nbsp;'+snombre+'&nbsp;('+esc(item.ciudad)+','+esc(item.pais)+')';
+		item.texto=sfecha+stipo+'&nbsp;'+snombre+'&nbsp;('+esc(item.ciudad)+','+esc(item.pais)+')'+
+			(item.estimado ? '&nbsp;<span title="fecha estimada: repite la edición anterior">&#9203;</span>' : '');
 		span.innerHTML=item.texto;
 		li.appendChild(span);
 
