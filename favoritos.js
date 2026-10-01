@@ -10,8 +10,10 @@ var favoritos=[
   ["Greater China Tango Championship", "Chengdu", "go"],
   ["Vietnam Tango Marathon", "Da Nang", "go"],
   ["Select Tango Weekend", "Beijing", "go"],
+  ["Shenyang Summer Ice & Snow Tango Weekend","Shenyang","go"],
   ["Jeju Summ Milonga", "Jeju", "go"],
-  ["Taiwan Tango Marathon", "Doulan Village", "go"],
+  ["Taiwan Tango Marathon", "Doulan Village", "go"], 
+  ["Oriental Tango Congress(OTC)", "Beijing", "go"],
   // home 🛖
   ["Crab Milonga", "Pohang", "home"],
   ["Cherry Blossoms Milonga", "Changwon", "home"],

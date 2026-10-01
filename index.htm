@@ -64,6 +64,17 @@ select, input, table {
 img{
 	width:12px;
 }
+img.fotoPerfil{
+	/* flota sobre el listado al final de la linea, sin desplazar el resto */
+	position:absolute;
+	z-index:50;
+	width:auto;
+	height:120px;
+	margin-left:6px;
+	transform:translateY(calc(-50% + 0.6em));   /* centro de la imagen a la altura de la linea */
+	border-radius:4px;
+	box-shadow:0px 2px 8px rgba(0,0,0,0.4);
+}
 h3{
 	margin: 0px 20px 0px 0px ;
 	color: #222;
@@ -143,6 +154,10 @@ a#link{
 .iconoUrl{
 	position:relative;
 	top:1px;
+}
+.fav{
+	font-size:0.85em;
+	line-height:0;
 }
 #titulo1{
 	text-align: left;
@@ -230,6 +245,7 @@ a#link{
 <script id='fuente1' src='publicEvent.out.js'></script>
 <script id='fuente2' src='publicPeople.out.js'></script>
 <script id='fuente3' src='privatePeople.out.js'></script>
+<script id='fuente4' src='imagenes/lista.js'></script>  <!-- fotosPerfil: fotos de imagenes/fotos/ (opcional) -->
 <!-- favoritos.js se carga bajo demanda: cargaFavoritos() -->
 
 
@@ -290,6 +306,11 @@ function readParam(){
 	}
 }
 
+function peopleDisponible(){
+	// privatePeople.out.js no se sube a la web: si no esta cargado, usa publicPeople.
+	return (typeof privatePeople!='undefined') ? privatePeople : publicPeople;
+}
+
 function inicio(){
 	// Punto de entrada (window.onload): elige el dataset segun app, define los
 	// colores por tipo, monta el menu lateral con los selectores y pinta el
@@ -297,7 +318,7 @@ function inicio(){
 	readParam();
 	app=parametros.app;
 	if (app=='mundo'){
-		datos=publicEvent.concat(publicPeople);
+		datos=publicEvent.concat(peopleDisponible());   // privado si existe (local), si no el público (web)
 		titulo1='OnlyTangoInfo';
 		titulo2='<a href="https://www.facebook.com/profile.php?id=100093497583670" target="_blank">by KoKoTango</a>';
 		colorTipo.set('listevents','#ead764');
@@ -317,9 +338,17 @@ function inicio(){
 		colorTipo.set('org','#ebc4ff');
 		colorTipo.set('djm','#db94ff');
 		colorTipo.set('wrt','#f9fea0');
+		// roles privados
+		colorTipo.set('mil','#ffccff');
+		colorTipo.set('com','#ffcccc');
+		colorTipo.set('vip','#ff9999');
+		colorTipo.set('dan','#cfe8ff');
+		colorTipo.set('tch','#b3f0e0');
+		colorTipo.set('inf','#F9AA90');
+		colorTipo.set('non','#e0e0e0');
 	}
 	if(app=='people'){
-		datos=privatePeople;   // privado contiene a todos; publicPeople es un subconjunto
+		datos=peopleDisponible();   // privado contiene a todos; publicPeople es un subconjunto
 		titulo1=`People &#128518; `;
 		titulo2='';
 		// roles (ROLES_VALIDOS en comun.py): públicos
@@ -338,6 +367,7 @@ function inicio(){
 		colorTipo.set('non','#e0e0e0');
 	}
 	datosAll=datos;
+	cargaFotos();
 
 	const body=document.body;
 	const fijo=document.createElement('div');
@@ -480,9 +510,9 @@ function claveFav(nombre,ciudad){
 const favMapa=new Map();
 
 function cargaFavoritos(){
-	// Carga favoritos.js en local (file:) o, en la web, solo con ?fav en la
-	// url. Si no existe, no pasa nada: el listado queda como sin favoritos.
-	if (parametros.fav==undefined && location.protocol!='file:'){return}
+	// Carga favoritos.js solo con ?fav en la url (en local y en la web).
+	// Si no existe, no pasa nada: el listado queda como sin favoritos.
+	if (parametros.fav==undefined){return}
 	const s=document.createElement('script');
 	s.src='favoritos.js';
 	s.onload=function(){
@@ -495,10 +525,39 @@ function cargaFavoritos(){
 	document.head.appendChild(s);
 }
 
+// ── Fotos (imagenes/lista.js, opcional) ──
+// fotosPerfil = ['perfil_Nombre_Apellido.jpg',...]: 'perfil_' + nombre con todo
+// lo que no sea letra, numero o '-' cambiado por '_' (ej. 'Angel & Lorena' -> 'perfil_Angel___Lorena.jpg').
+const fotoSet=new Set();
+function cargaFotos(){
+	if (typeof fotosPerfil=='undefined'){return}
+	for (const f of fotosPerfil){ fotoSet.add(f); }
+}
+function iconoFoto(nombre){
+	// Enlace 👤 a imagenes/fotos/<fichero> si la persona tiene foto; si no, ''.
+	const f='perfil_'+String(nombre).replace(/[^\p{L}\p{N}\-]/gu,'_')+'.jpg';
+	return fotoSet.has(f) ? '<a href="imagenes/fotos/'+encodeURIComponent(f)+
+		'" onclick="return toggleFoto(this)">&#128100;</a>' : '';
+}
+function toggleFoto(a){
+	// Click en 👤: muestra la foto justo al lado del 👤; otro click en 👤 o en la foto la quita.
+	// (onclick en linea: sobrevive al innerHTML+= del render)
+	const sig=a.nextElementSibling;
+	if (sig && sig.classList.contains('fotoPerfil')){ sig.remove(); return false; }
+	const nueva=document.createElement('img');
+	nueva.className='fotoPerfil';
+	nueva.src=a.getAttribute('href');
+	nueva.alt='';
+	nueva.style.cursor='pointer';
+	nueva.onclick=function(){ nueva.remove(); };   // click en la foto: se cierra
+	a.after(nueva);
+	return false;
+}
+
 function iconoFav(nombre,ciudad){
 	// Emoji del estado del favorito (con espacio detras) o '' si no lo es.
 	const e=favMapa.get(claveFav(nombre,ciudad));
-	return e ? '<span title="'+e+'">'+(FAV_ICONO[e]||'&#11088;')+'</span>&nbsp;' : '';
+	return e ? '<span class="fav" title="'+e+'">'+(FAV_ICONO[e]||'&#11088;')+'</span>&nbsp;' : '';
 }
 
 function esc(s){
@@ -507,12 +566,12 @@ function esc(s){
 	return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function spanRoles(tipo){
+function spanRoles(tipo,sep){
 	// Lista de roles ('org,art,ptc2026') con una etiqueta de color por rol
-	// (colorTipo, gris si no está); las comas van sin color.
+	// (colorTipo, gris si no está); separados por sep (',' por defecto).
 	return String(tipo).split(',').map(r => r.trim()).filter(r => r && r!='-').map(r =>
 		'<span style="background-color:'+(colorTipo.get(r)||'#DDD')+'">'+esc(r)+'</span>'
-	).join(',');
+	).join(sep==undefined ? ',' : sep);
 }
 
 function opTxt(t,n){
@@ -586,6 +645,7 @@ function crearSelType(){
 			claves(cuentas).forEach(x => {
 				if (esEvento(x)){return}
 				createOpt(select,x.split(' ')[0],x,cuentas.get(x)||0);
+				select.lastChild.textContent+=sufijoRol(x);
 			})
 		}
 	}else if (app=='people'){
@@ -595,7 +655,7 @@ function crearSelType(){
 			if (!x || x=='-'){return}
 			const opt=document.createElement('option');
 			opt.value=x;
-			opt.textContent=opTxt(x,cuentas.get(x)||0);
+			opt.textContent=opTxt(x,cuentas.get(x)||0)+sufijoRol(x);
 			select.appendChild(opt);
 		});
 	}else{
@@ -793,7 +853,12 @@ function prefijoVista(){
 	return '';
 }
 
-const rolesPeople=['art','ptc2026','org','djm','wrt'];   // ROLES_PUBLICOS en comun.py
+// nombre de cada rol: se muestra en el selector detras del contador (vacio = sin nombre)
+const NOMBRE_ROL={art:'artista',ptc2026:'',org:'organiza',djm:'tangoDJ',wrt:'writer',mil:'milonguera',
+	com:'compañía',vip:'mil+com+inf',dan:'dancer',tch:'teacher',inf:'info',non:''};
+function sufijoRol(r){ const n=NOMBRE_ROL[r]; return n ? ' '+n : ''; }
+
+const rolesPeople=['art','ptc2026','org','djm','wrt','mil','com','vip','dan','tch','inf','non'];   // ROLES_VALIDOS en comun.py (públicos + privados)
 
 function ocultoEnAnual(tipo){
 	// Tipos que no se muestran en la vista annual (ni lista, ni contadores).
@@ -1293,6 +1358,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 			}
 
 			let span4='';
+			let scoment='';   // comentario libre del campo 6: va en otro parentesis detras
 			if (item.fechas!=''&&item.fechas!='-'){
 				// campo 6: fecha EVT/REG en eventos; comentario o urls en people
 				let tmp=item.fechas;
@@ -1301,30 +1367,51 @@ function renderCountries(s0,s1,s2,s3,s4){
 					span4='<div class="itemLinea">'+prt[2]+'.'+prt[4]+'</div>';
 				}else if (/^https?:\/\//.test(tmp)){
 					span4=tmp.split(/\s+/).filter(u => /^https?:\/\//.test(u)).map(u =>
-						'<a href="'+u.replace(/"/g,'%22')+'" target="_blank">&#9654;</a>').join(' ');
+						'<a href="'+u.replace(/"/g,'%22')+'" target="_blank">&#9654;&#65039;</a>').join(' ');
 				}else{
-					span4='<div class="itemLinea">'+esc(tmp)+'</div>';
+					scoment='<div class="itemLinea">'+esc(tmp)+'</div>';
 				}
 			}
 			if (app=='people'){
+				const sfoto=iconoFoto(item.nombre);
 				item.texto=span2+' : '+esc(item.nombre)+' : '+span1.replace('event ','')+
-				' : '+span3+' : '+span4;
+				' : '+span3+' : '+(span4||scoment)+(sfoto ? ' '+sfoto : '');
 				span.innerHTML=item.texto;
 			}else{
 				let scity=item.ciudad!='' ? esc(item.ciudad)+',&nbsp;' : '';
 				const fav=String(item.tipo).startsWith('event') ? iconoFav(item.nombre,item.ciudad) : '';
-				item.texto=span1.replace('event','').trim()+'&nbsp;'+scity+
-				fav+esc(item.nombre)+',&nbsp;'+span3+'('+span4+')';
+				// enlace ↗️ dentro del paréntesis, junto a fecha o ▶️
+				let slink='';
+				if (item.url!=''&&item.url!='-'){
+					slink='<a href="'+item.url.replace(/"/g,'%22')+
+						'" target="_blank"><span class="iconoUrl">&#8599;&#65039;</span></a>';
+				}
+				// foto 👤 solo para personas (no eventos)
+				const sfoto=String(item.tipo).startsWith('event') ? '' : iconoFoto(item.nombre);
+				// (fecha o ▶️ 👤 ↗️) y detras (comentario); sin parentesis vacios
+				const dentro=[span4,sfoto,slink].filter(Boolean).join(' ');
+				// personas: roles entre parentesis detras del nombre; eventos: etiqueta delante
+				const esPersona=!['event','venue','milonga'].includes(String(item.tipo).split(' ')[0]);
+				const delante=esPersona ? '' : span1.replace('event','').trim()+'&nbsp;';
+				// roles separados por espacio (sin comas)
+				const sroles=(esPersona && span1) ? '&nbsp;('+spanRoles(item.tipo,' ')+')' : '';
+				// campo 5 (venue / escuela / evento) entre []
+				const autor=(item.autor!=''&&item.autor!='-') ? item.autor.split('#')[0] : '';
+				const sautor=autor ? '&nbsp;['+esc(autor)+']' : '';
+				// unica coma: detras de la ciudad
+				item.texto=delante+scity+
+				fav+esc(item.nombre)+sroles+(dentro ? '&nbsp;('+dentro+')' : '')+sautor+
+				(scoment ? '&nbsp;('+scoment+')' : '');
 				span.innerHTML=item.texto;
 			}
 
-			if (item.url!=''&&item.url!='-') {
+			if (app=='people' && item.url!=''&&item.url!='-') {
 				const spot=document.createTextNode(' ');
 				li.appendChild(spot);
 
 				const link=document.createElement('a');
 				link.href=item.url;
-				link.innerHTML='<img class="iconoUrl" src="img/a2.png">';
+				link.innerHTML='<span class="iconoUrl">&#8599;&#65039;</span>';
 				link.target='_blank';
 				li.appendChild(link);
 			}
@@ -1481,7 +1568,7 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 			li.appendChild(spot);
 			const link=document.createElement('a');
 			link.href=item.url;
-			link.innerHTML='<img class="iconoUrl" src="img/a2.png">';
+			link.innerHTML='<span class="iconoUrl">&#8599;&#65039;</span>';
 			link.target='_blank';
 			li.appendChild(link);
 		}
