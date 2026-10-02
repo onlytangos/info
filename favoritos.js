@@ -1,8 +1,18 @@
-// favoritos.js : estado de los eventos favoritos (va junto a index.htm)
-// Cada fila: [nombre, ciudad, estado], tal como salen en el listado. Se compara normalizado:
-// da igual mayúsculas, tildes, (paréntesis), años/números y palabras como
-// tango/marathon/festival/de/the. Estados: home 🛖, go 😊, think 🤔, moreinfo ❓
-// paso1 avisa en result.txt ([FAV]) de las entradas que no encuentran evento.
+/*
+
+favoritos.js : estado de los eventos favoritos (va junto a index.htm)
+
+Cada fila: [nombre, ciudad, estado], tal como salen en el listado.
+Se compara normalizado: da igual mayúsculas, tildes, (paréntesis),
+años/números y palabras como tango/marathon/festival/de/the.
+
+Estados: home 🛖, go 😊, think 🤔, moreinfo ❓
+
+paso1 avisa en result.txt ([FAV]) de las entradas que no encuentran evento.
+
+*/
+
+
 var favoritos=[
   // go 😊
   ["TANGO CHINA-Dapeng Tango Holiday", "Shenzhen", "go"],

@@ -151,9 +151,8 @@ a#link{
 	top:3px;
 	z-index:0;
 }
-.iconoUrl{
-	position:relative;
-	top:1px;
+.icon{
+	vertical-align:-0.15em;
 }
 .fav{
 	font-size:0.85em;
@@ -195,6 +194,13 @@ a#link{
 	font-size: 14px;
 	-webkit-appearance: auto;
 	appearance: auto;
+}
+#exportar{
+	width: 100%;
+	margin: 4px 0px 8px 0px;
+	padding: 4px;
+	font-size: 14px;
+	cursor: pointer;
 }
 #fijo h3{
 	float: none;
@@ -242,10 +248,11 @@ a#link{
 }
 </style>
 
+<script src='roles.js'></script>  <!-- ROLES: roles de people, compartido con comun.py -->
 <script id='fuente1' src='publicEvent.out.js'></script>
 <script id='fuente2' src='publicPeople.out.js'></script>
 <script id='fuente3' src='privatePeople.out.js'></script>
-<script id='fuente4' src='imagenes/lista.js'></script>  <!-- fotosPerfil: fotos de imagenes/fotos/ (opcional) -->
+<script id='fuente4' src='import-imagen/lista.js'></script>  <!-- fotosPerfil: fotos de import-imagen/fotos/ (opcional) -->
 <!-- favoritos.js se carga bajo demanda: cargaFavoritos() -->
 
 
@@ -281,6 +288,7 @@ var titulo1,titulo2;
 var parametros={};
 var ocultar='';
 var app;
+var filasVisibles=new Set();   // filas (arrays de datos) pintadas en el listado actual
 
 const MAXSEL=13;
 
@@ -321,10 +329,7 @@ function inicio(){
 		datos=publicEvent.concat(peopleDisponible());   // privado si existe (local), si no el público (web)
 		titulo1='OnlyTangoInfo';
 		titulo2='<a href="https://www.facebook.com/profile.php?id=100093497583670" target="_blank">by KoKoTango</a>';
-		colorTipo.set('listevents','#ead764');
-		colorTipo.set('address','#ffd469');
 		colorTipo.set('milonga','#adf5d7');
-		colorTipo.set('listmilongas','#aFf5d7');
 		colorTipo.set('venue','#fae3ad');
 		colorTipo.set('event','#e5f9ff');
 		colorTipo.set('event party','#d7f6fa');
@@ -332,39 +337,15 @@ function inicio(){
 		colorTipo.set('event encuentro','#7db1ff');
 		colorTipo.set('event marathon','#acccfc');
 		colorTipo.set('event championship','#ff6961');
-		// roles públicos de people (ROLES_PUBLICOS en comun.py)
-		colorTipo.set('art','#e4ddff');
-		colorTipo.set('ptc2026','#ffe0b3');
-		colorTipo.set('org','#ebc4ff');
-		colorTipo.set('djm','#db94ff');
-		colorTipo.set('wrt','#f9fea0');
-		// roles privados
-		colorTipo.set('mil','#ffccff');
-		colorTipo.set('com','#ffcccc');
-		colorTipo.set('vip','#ff9999');
-		colorTipo.set('dan','#cfe8ff');
-		colorTipo.set('tch','#b3f0e0');
-		colorTipo.set('inf','#F9AA90');
-		colorTipo.set('non','#e0e0e0');
+		// roles de people (roles.js)
+		for (const r in ROLES){ colorTipo.set(r,ROLES[r].color); }
 	}
 	if(app=='people'){
 		datos=peopleDisponible();   // privado contiene a todos; publicPeople es un subconjunto
 		titulo1=`People &#128518; `;
 		titulo2='';
-		// roles (ROLES_VALIDOS en comun.py): públicos
-		colorTipo.set('art','#e4adff');
-		colorTipo.set('ptc2026','#ffe0b3');
-		colorTipo.set('org','#ccffcc');
-		colorTipo.set('djm','#db94ff');
-		colorTipo.set('wrt','#F9EE90');
-		// privados
-		colorTipo.set('mil','#ffccff');
-		colorTipo.set('com','#ffcccc');
-		colorTipo.set('vip','#ff9999');
-		colorTipo.set('dan','#cfe8ff');
-		colorTipo.set('tch','#b3f0e0');
-		colorTipo.set('inf','#F9AA90');
-		colorTipo.set('non','#e0e0e0');
+		// roles de people (roles.js)
+		for (const r in ROLES){ colorTipo.set(r,ROLES[r].colorPeople); }
 	}
 	datosAll=datos;
 	cargaFotos();
@@ -389,6 +370,7 @@ function inicio(){
 		crearBuscador(fijo);
 		setParametrosSelectores(fijo);
 		setSel();
+		crearBotonExport(fijo);
 	}
 
 	const results=document.createElement('ul');
@@ -423,6 +405,60 @@ function setParametrosSelectores(fijo){
 		crearSelDates();
 		cambiarValorSelector('selector4',parametros.fecha);
 	}
+}
+
+function crearBotonExport(fijo){
+	// Boton 'export' debajo de los selectores.
+	const b=document.createElement('button');
+	b.id='exportar';
+	b.textContent='export';
+	b.addEventListener('click',exportar);
+	fijo.appendChild(b);
+}
+
+function descarga(nombre,texto){
+	// Descarga 'texto' como un fichero llamado 'nombre'.
+	const a=document.createElement('a');
+	a.href=URL.createObjectURL(new Blob([texto],{type:'text/javascript'}));
+	a.download=nombre;
+	document.body.appendChild(a);
+	a.click();
+	a.remove();
+	setTimeout(() => URL.revokeObjectURL(a.href),1000);
+}
+
+function exportar(){
+	// Descarga export.js con las filas de privatePeople (o publicPeople si no hay
+	// privado) que se ven en el listado, en el formato original del fichero:
+	// misma primera linea, lineas de datos tal cual y misma ultima linea.
+	const privado=(typeof privatePeople!='undefined');
+	const nombreVar=privado ? 'privatePeople' : 'publicPeople';
+	const src=document.getElementById(privado ? 'fuente3' : 'fuente2').getAttribute('src');
+	const fichero='export.js';
+	const visibles=new Set([...filasVisibles].map(f => JSON.stringify(f)));
+	fetch(src).then(r => r.ok ? r.text() : Promise.reject()).then(txt => {
+		// copia literal del fichero: cabecera y cierre tal cual, filas filtradas
+		const lineas=txt.split('\n');
+		const esFila=l => l.trim().startsWith('[');
+		const ini=lineas.findIndex(esFila);
+		let fin=lineas.length-1;
+		while (fin>=0 && !esFila(lineas[fin])){ fin--; }
+		if (ini==-1){ return Promise.reject(); }
+		let leidas=0;
+		const cuerpo=lineas.slice(ini,fin+1).filter(l => {
+			try{
+				const f=JSON.parse(l.trim().replace(/,$/,''));
+				leidas++;
+				return visibles.has(JSON.stringify(f));
+			}catch(e){ return false; }
+		});
+		if (leidas==0){ return Promise.reject(); }
+		descarga(fichero,[...lineas.slice(0,ini),...cuerpo,...lineas.slice(fin+1)].join('\n'));
+	}).catch(() => {
+		// sin acceso al fichero (abierto con file://): se regenera con el mismo esquema
+		const filas=peopleDisponible().filter(f => visibles.has(JSON.stringify(f))).map(f => JSON.stringify(f));
+		descarga(fichero,'var '+nombreVar+'=[\n'+filas.join(',\n')+'\n];\n');
+	});
 }
 
 function cambiarValorSelector(idSelector, nuevoValor) {
@@ -525,7 +561,7 @@ function cargaFavoritos(){
 	document.head.appendChild(s);
 }
 
-// ── Fotos (imagenes/lista.js, opcional) ──
+// ── Fotos (import-imagen/lista.js, opcional) ──
 // fotosPerfil = ['perfil_Nombre_Apellido.jpg',...]: 'perfil_' + nombre con todo
 // lo que no sea letra, numero o '-' cambiado por '_' (ej. 'Angel & Lorena' -> 'perfil_Angel___Lorena.jpg').
 const fotoSet=new Set();
@@ -533,11 +569,23 @@ function cargaFotos(){
 	if (typeof fotosPerfil=='undefined'){return}
 	for (const f of fotosPerfil){ fotoSet.add(f); }
 }
-function iconoFoto(nombre){
-	// Enlace 👤 a imagenes/fotos/<fichero> si la persona tiene foto; si no, ''.
-	const f='perfil_'+String(nombre).replace(/[^\p{L}\p{N}\-]/gu,'_')+'.jpg';
-	return fotoSet.has(f) ? '<a href="imagenes/fotos/'+encodeURIComponent(f)+
-		'" onclick="return toggleFoto(this)">&#128100;</a>' : '';
+function fbkey(u){
+	// usuario de FB de una url (igual que revisar.html): id numerico o nombre de perfil
+	u=String(u||'').trim();
+	const m=u.match(/[?&]id=(\d+)/); if (m) return m[1];
+	const p=u.replace(/^https?:\/\/(www\.|m\.|web\.)?facebook\.com\//,'').split('?')[0].replace(/^\/+|\/+$/g,'').split('/')[0];
+	return p.replace(/[^\w.-]/gu,'_').toLowerCase();
+}
+function iconoFoto(nombre,url){
+	// Enlace 👤 a import-imagen/fotos/<fichero> si la persona tiene foto; si no, ''.
+	// Busca perfil_<usuarioFB> y si no perfil_<nombre>, en jpg/webp/png.
+	const claves=[];
+	if (/facebook\.com\//.test(url||'')){ const k=fbkey(url); if (k) claves.push('perfil_'+k); }
+	claves.push('perfil_'+String(nombre).replace(/[^\p{L}\p{N}\-]/gu,'_'));
+	let f='';
+	for (const k of claves) for (const e of ['jpg','webp','png']) if (!f && fotoSet.has(k+'.'+e)) f=k+'.'+e;
+	return f ? '<a href="import-imagen/fotos/'+encodeURIComponent(f)+
+		'" onclick="return toggleFoto(this)">'+icon('user')+'</a>' : '';
 }
 function toggleFoto(a){
 	// Click en 👤: muestra la foto justo al lado del 👤; otro click en 👤 o en la foto la quita.
@@ -560,16 +608,39 @@ function iconoFav(nombre,ciudad){
 	return e ? '<span class="fav" title="'+e+'">'+(FAV_ICONO[e]||'&#11088;')+'</span>&nbsp;' : '';
 }
 
+function esEvento(tipo){
+	// true si la fila es evento, venue o milonga (primera palabra del tipo);
+	// si no, es una persona. Unica regla para distinguirlos en todo el codigo.
+	return ['event','venue','milonga'].includes(String(tipo).split(' ')[0]);
+}
+
 function esc(s){
 	// Escapa &, < y > de un texto antes de meterlo en innerHTML (evita romper
 	// el maquetado o inyectar HTML desde los datos).
 	return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+const ICONS={
+	// imitan los emoji: ▶️ cuadrado naranja, ↗️ gris azulado, con simbolo blanco; 👤 silueta azul
+	play:'<rect x="1" y="1" width="22" height="22" rx="5" fill="#f5a623"/>'+
+		'<path d="M9 6.5v11l9-5.5z" fill="#fff"/>',
+	external:'<rect x="1" y="1" width="22" height="22" rx="5" fill="#6d8aa6"/>'+
+		'<path d="M7.5 16.5l9-9M10 7.5h6.5V14" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
+	user:'<circle cx="12" cy="7.5" r="5" fill="#3b8ee8"/>'+
+		'<path d="M2 23c0-6.2 4.5-9.5 10-9.5s10 3.3 10 9.5z" fill="#3b8ee8"/>'
+};
+function icon(nombre,size){
+	// SVG en linea con el aspecto del emoji original; size por defecto 1.1em
+	size=size||'1.1em';
+	return '<svg class="icon" width="'+size+'" height="'+size+'" viewBox="0 0 24 24" '+
+		'aria-hidden="true">'+(ICONS[nombre]||'')+'</svg>';
+}
+
 function spanRoles(tipo,sep){
-	// Lista de roles ('org,art,ptc2026') con una etiqueta de color por rol
-	// (colorTipo, gris si no está); separados por sep (',' por defecto).
-	return String(tipo).split(',').map(r => r.trim()).filter(r => r && r!='-').map(r =>
+	// Lista de roles ('org,art,p26') con una etiqueta de color por rol
+	// (colorTipo, gris si no está), en orden alfabético ('art,org,p26');
+	// separados por sep (',' por defecto).
+	return String(tipo).split(',').map(r => r.trim()).filter(r => r && r!='-').sort().map(r =>
 		'<span style="background-color:'+(colorTipo.get(r)||'#DDD')+'">'+esc(r)+'</span>'
 	).join(sep==undefined ? ',' : sep);
 }
@@ -604,7 +675,6 @@ function addTiposEvento(select,cuentas,conPrefijo){
 	// Añade una <option> por cada tipo de evento (event/venue/milonga) presente
 	// en 'cuentas', en orden alfabetico. Compartido por las vistas countries y
 	// annual; 'conPrefijo' antepone el codigo de 3 letras (ej. 'MAR.marathon').
-	const esEvento = x => ['event','venue','milonga'].includes(x.split(' ')[0]);
 	claves(cuentas).forEach(x => {
 		if (x=='event' || !esEvento(x)){return}
 		let y=x.replace('event ','').trim();
@@ -638,10 +708,12 @@ function crearSelType(){
 			addTiposEvento(select,cuentaTipoEVT(),false);
 		}else{
 			let cuentas=cuentaCol2(colTipo);
-			const esEvento = x => ['event','venue','milonga'].includes(x.split(' ')[0]);
 			createOpt(select,'event','event*',sumaCuenta(cuentas,'event'));
 			addTiposEvento(select,cuentas,true);
-			createOpt(select,rolesPeople.join(','),'people*',cuentaFilasTipo(rolesPeople.join(',')));
+			createOpt(select,'!','people',cuentaFilasTipo('!'));   // todas las personas, con o sin rol
+			createOpt(select,'+'+rolesPeople.join(','),'peopleRol',cuentaFilasTipo('+'+rolesPeople.join(',')));
+			createOpt(select,'+'+rolesPublicos.join(','),'peoplePublic',cuentaFilasTipo('+'+rolesPublicos.join(',')));
+			createOpt(select,'!'+rolesPublicos.join(','),'peoplePrivate',cuentaFilasTipo('!'+rolesPublicos.join(',')));
 			claves(cuentas).forEach(x => {
 				if (esEvento(x)){return}
 				createOpt(select,x.split(' ')[0],x,cuentas.get(x)||0);
@@ -651,6 +723,8 @@ function crearSelType(){
 	}else if (app=='people'){
 		let cuentas=cuentaCol2(colTipo);
 		let lista=claves(cuentas);
+		createOpt(select,'+'+rolesPublicos.join(','),'peoplePublic',cuentaFilasTipo('+'+rolesPublicos.join(',')));
+		createOpt(select,'!'+rolesPublicos.join(','),'peoplePrivate',cuentaFilasTipo('!'+rolesPublicos.join(',')));
 		lista.forEach(x => {
 			if (!x || x=='-'){return}
 			const opt=document.createElement('option');
@@ -854,11 +928,12 @@ function prefijoVista(){
 }
 
 // nombre de cada rol: se muestra en el selector detras del contador (vacio = sin nombre)
-const NOMBRE_ROL={art:'artista',ptc2026:'',org:'organiza',djm:'tangoDJ',wrt:'writer',mil:'milonguera',
-	com:'compañía',vip:'mil+com+inf',dan:'dancer',tch:'teacher',inf:'info',non:''};
+const NOMBRE_ROL={'-':'sin rol'};
+for (const r in ROLES){ NOMBRE_ROL[r]=ROLES[r].nombre; }
 function sufijoRol(r){ const n=NOMBRE_ROL[r]; return n ? ' '+n : ''; }
 
-const rolesPeople=['art','ptc2026','org','djm','wrt','mil','com','vip','dan','tch','inf','non'];   // ROLES_VALIDOS en comun.py (públicos + privados)
+const rolesPublicos=Object.keys(ROLES).filter(r => ROLES[r].publico);   // ROLES_PUBLICOS en comun.py
+const rolesPeople=Object.keys(ROLES);                                     // ROLES_VALIDOS en comun.py (públicos + privados)
 
 function ocultoEnAnual(tipo){
 	// Tipos que no se muestran en la vista annual (ni lista, ni contadores).
@@ -1000,6 +1075,7 @@ function getObj(i){
 			autor:datos[i][colAutor],
 			fechas:datos[i][colFecha],
 			url:datos[i][colUrl],
+			fila:datos[i],
 	}
 	return o;
 }
@@ -1110,6 +1186,16 @@ function renderGo(){
 function filtra(cadena1,cadena2){
 	// Devuelve 1 si alguna palabra de cadena1 (lista por comas) aparece en
 	// cadena2; si no, -1.
+	// Prefijos especiales (roles exactos, no subcadena):
+	//  '+r1,r2' : tiene alguno de esos roles (peoplePublic)
+	//  '!r1,r2' : persona (no evento/venue/milonga) sin ninguno de esos roles (peoplePrivate)
+	//  '!'      : sin lista, cualquier persona (people)
+	if (cadena1[0]=='+' || cadena1[0]=='!'){
+		const roles=String(cadena2).split(',').map(r => r.trim());
+		const hay=cadena1.slice(1).split(',').some(r => roles.includes(r));
+		if (cadena1[0]=='+'){ return hay ? 1 : -1; }
+		return (!hay && !esEvento(cadena2)) ? 1 : -1;
+	}
 	let lista1=cadena1.split(',');
 	for (const x of lista1){
 		if (cadena2.indexOf(x)!=-1){
@@ -1202,6 +1288,7 @@ function renderRegular(s0,s1,s2,s3,s4){
 				let clave=venue+'#'+diaTxt+'#'+hora+'#'+item.nombre;
 				if (vistos.has(clave)){continue}
 				vistos.add(clave);
+				filasVisibles.add(item.fila);
 				contadorL2+=1;
 				contadorL1+=1;
 				if (!mapa.has(venue)){
@@ -1222,6 +1309,7 @@ function renderRegular(s0,s1,s2,s3,s4){
 				let clave=venue+'#?#'+item.nombre;
 				if (vistos.has(clave)){continue}
 				vistos.add(clave);
+				filasVisibles.add(item.fila);
 				contadorL2+=1;
 				contadorL1+=1;
 				if (!mapa.has(venue)){
@@ -1317,6 +1405,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 
 		for (const item of entradas) {
 			if (!pasaFiltros(item,s2,s3,s4)){continue}
+			filasVisibles.add(item.fila);
 
 			contadorL2+=1;
 			contadorL1+=1;
@@ -1332,8 +1421,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 				if (app=='people'){
 					span1=spanRoles(item.tipo);
 				}else{
-					let t0=item.tipo.split(' ')[0];
-					if (t0=='event'||t0=='venue'||t0=='milonga'){
+					if (esEvento(item.tipo)){
 						let color=colorTipo.get(item.tipo);
 						if (color==undefined){color='#DDD'}
 						let tmp=get3(item.tipo);
@@ -1367,13 +1455,13 @@ function renderCountries(s0,s1,s2,s3,s4){
 					span4='<div class="itemLinea">'+prt[2]+'.'+prt[4]+'</div>';
 				}else if (/^https?:\/\//.test(tmp)){
 					span4=tmp.split(/\s+/).filter(u => /^https?:\/\//.test(u)).map(u =>
-						'<a href="'+u.replace(/"/g,'%22')+'" target="_blank">&#9654;&#65039;</a>').join(' ');
+						'<a href="'+u.replace(/"/g,'%22')+'" target="_blank">'+icon('play')+'</a>').join(' ');
 				}else{
 					scoment='<div class="itemLinea">'+esc(tmp)+'</div>';
 				}
 			}
 			if (app=='people'){
-				const sfoto=iconoFoto(item.nombre);
+				const sfoto=iconoFoto(item.nombre,item.url);
 				item.texto=span2+' : '+esc(item.nombre)+' : '+span1.replace('event ','')+
 				' : '+span3+' : '+(span4||scoment)+(sfoto ? ' '+sfoto : '');
 				span.innerHTML=item.texto;
@@ -1384,14 +1472,14 @@ function renderCountries(s0,s1,s2,s3,s4){
 				let slink='';
 				if (item.url!=''&&item.url!='-'){
 					slink='<a href="'+item.url.replace(/"/g,'%22')+
-						'" target="_blank"><span class="iconoUrl">&#8599;&#65039;</span></a>';
+						'" target="_blank">'+icon('external')+'</a>';
 				}
 				// foto 👤 solo para personas (no eventos)
-				const sfoto=String(item.tipo).startsWith('event') ? '' : iconoFoto(item.nombre);
+				const sfoto=esEvento(item.tipo) ? '' : iconoFoto(item.nombre,item.url);
 				// (fecha o ▶️ 👤 ↗️) y detras (comentario); sin parentesis vacios
 				const dentro=[span4,sfoto,slink].filter(Boolean).join(' ');
 				// personas: roles entre parentesis detras del nombre; eventos: etiqueta delante
-				const esPersona=!['event','venue','milonga'].includes(String(item.tipo).split(' ')[0]);
+				const esPersona=!esEvento(item.tipo);
 				const delante=esPersona ? '' : span1.replace('event','').trim()+'&nbsp;';
 				// roles separados por espacio (sin comas)
 				const sroles=(esPersona && span1) ? '&nbsp;('+spanRoles(item.tipo,' ')+')' : '';
@@ -1411,7 +1499,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 
 				const link=document.createElement('a');
 				link.href=item.url;
-				link.innerHTML='<span class="iconoUrl">&#8599;&#65039;</span>';
+				link.innerHTML=icon('external');
 				link.target='_blank';
 				li.appendChild(link);
 			}
@@ -1517,6 +1605,7 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 		      s1!=item.pais
 		){continue}
 
+		filasVisibles.add(item.fila);
 		contadorL1+=1;
 
 		const li=document.createElement('li');
@@ -1568,7 +1657,7 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 			li.appendChild(spot);
 			const link=document.createElement('a');
 			link.href=item.url;
-			link.innerHTML='<span class="iconoUrl">&#8599;&#65039;</span>';
+			link.innerHTML=icon('external');
 			link.target='_blank';
 			li.appendChild(link);
 		}
@@ -1582,6 +1671,7 @@ function render(s0,s1,s2,s3,s4,s5){
 	// Despacha a la vista activa (regular/annual/countries) y actualiza el
 	// contador total del sumario.
 	let contadorL1;
+	filasVisibles.clear();
 	if (s5=='regular'){
 		contadorL1=renderRegular(s0,s1,s2,s3,s4);
 	}else if (s5=='annual'){
