@@ -1,37 +1,6 @@
 /*
 
-roles.js : roles de people (campo 4), en un solo sitio para todos.
 
-  - index.htm lo carga con <script> (va junto a index.htm; push.sh lo sube)
-  - import-datos/comun.py y bin/common.py leen los objetos de "var ROLES ="
-    y "var ROLES_EQUIVALENCIAS =" como JSON: dentro, JSON estricto (comillas
-    dobles, sin comas finales, sin comentarios). Los comentarios, aquí fuera.
-
-Cada rol:
-  publico     1 = puede salir en publicPeople.out.js (ROLES_PUBLICOS)
-              0 = solo privado
-  desc        descripción (ROLES_VALIDOS en comun.py)
-  nombre      sufijo en el selector de index.htm ("" = sin sufijo)
-  color       color de la etiqueta en index.htm, vista mundo
-  colorPeople color de la etiqueta en index.htm, vista people
-
-Roles públicos:
-  art      baila/actúa profesionalmente
-  p26..p24 compite/compitió en el Pacific Tango Championship 2026..2024
-           (ptc2026..ptc2024 se convierten a p26..p24: ROLES_EQUIVALENCIAS en comun.py)
-  org      organiza milongas, festivales o maratones
-  djm      DJ de tango
-  wrt      escribe, publica o hace vídeos sobre tango
-  tch      da clases
-Roles privados:
-  mil      bailarina de buen nivel
-  com      compañera de viaje o de baile
-  vip      milonguera, compañía y fuente de información
-  dan      baila, pero no a nivel milonguera
-  inf      fuente de información sobre eventos y gente
-  non      descartada: ya no baila, baila mal, no disponible
-
-El orden de aquí es el de los selectores de index.htm.
 
 */
 

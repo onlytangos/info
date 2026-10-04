@@ -252,7 +252,7 @@ a#link{
 <script id='fuente1' src='publicEvent.out.js'></script>
 <script id='fuente2' src='publicPeople.out.js'></script>
 <script id='fuente3' src='privatePeople.out.js'></script>
-<script id='fuente4' src='import-imagen/lista.js'></script>  <!-- fotosPerfil: fotos de import-imagen/fotos/ (opcional) -->
+<script id='fuente4' src='import/src.imagen/fotos.js'></script>  <!-- fotosPerfil: fotos de import/src.imagen/fotos/ (opcional) -->
 <!-- favoritos.js se carga bajo demanda: cargaFavoritos() -->
 
 
@@ -408,7 +408,9 @@ function setParametrosSelectores(fijo){
 }
 
 function crearBotonExport(fijo){
-	// Boton 'export' debajo de los selectores.
+	// Boton 'export' debajo de los selectores. Solo si esta privatePeople
+	// (local): en la web no se sube y el boton no se muestra.
+	if (typeof privatePeople=='undefined'){return}
 	const b=document.createElement('button');
 	b.id='exportar';
 	b.textContent='export';
@@ -419,7 +421,7 @@ function crearBotonExport(fijo){
 function descarga(nombre,texto){
 	// Descarga 'texto' como un fichero llamado 'nombre'.
 	const a=document.createElement('a');
-	a.href=URL.createObjectURL(new Blob([texto],{type:'text/javascript'}));
+	a.href=URL.createObjectURL(new Blob([texto],{type:'application/json'}));
 	a.download=nombre;
 	document.body.appendChild(a);
 	a.click();
@@ -428,37 +430,16 @@ function descarga(nombre,texto){
 }
 
 function exportar(){
-	// Descarga export.js con las filas de privatePeople (o publicPeople si no hay
-	// privado) que se ven en el listado, en el formato original del fichero:
-	// misma primera linea, lineas de datos tal cual y misma ultima linea.
-	const privado=(typeof privatePeople!='undefined');
-	const nombreVar=privado ? 'privatePeople' : 'publicPeople';
-	const src=document.getElementById(privado ? 'fuente3' : 'fuente2').getAttribute('src');
-	const fichero='export.js';
+	// Descarga export.json con las filas de privatePeople que se ven en el
+	// listado, en el mismo formato que los demas res*.json del import: array
+	// JSON, una fila de 8 campos por linea.
+	// Se copia a import/src.imagen/export.json: no se edita ni lo lee el
+	// import (las correcciones van por revisar.html, ver src.imagen/index.sh).
 	const visibles=new Set([...filasVisibles].map(f => JSON.stringify(f)));
-	fetch(src).then(r => r.ok ? r.text() : Promise.reject()).then(txt => {
-		// copia literal del fichero: cabecera y cierre tal cual, filas filtradas
-		const lineas=txt.split('\n');
-		const esFila=l => l.trim().startsWith('[');
-		const ini=lineas.findIndex(esFila);
-		let fin=lineas.length-1;
-		while (fin>=0 && !esFila(lineas[fin])){ fin--; }
-		if (ini==-1){ return Promise.reject(); }
-		let leidas=0;
-		const cuerpo=lineas.slice(ini,fin+1).filter(l => {
-			try{
-				const f=JSON.parse(l.trim().replace(/,$/,''));
-				leidas++;
-				return visibles.has(JSON.stringify(f));
-			}catch(e){ return false; }
-		});
-		if (leidas==0){ return Promise.reject(); }
-		descarga(fichero,[...lineas.slice(0,ini),...cuerpo,...lineas.slice(fin+1)].join('\n'));
-	}).catch(() => {
-		// sin acceso al fichero (abierto con file://): se regenera con el mismo esquema
-		const filas=peopleDisponible().filter(f => visibles.has(JSON.stringify(f))).map(f => JSON.stringify(f));
-		descarga(fichero,'var '+nombreVar+'=[\n'+filas.join(',\n')+'\n];\n');
-	});
+	const filas=peopleDisponible().filter(f => visibles.has(JSON.stringify(f)));
+	if (!filas.length){ return }
+	const cuerpo=filas.map(f => '  ['+f.map(v => JSON.stringify(v)).join(', ')+']').join(',\n');
+	descarga('export.json','[\n'+cuerpo+'\n]\n');
 }
 
 function cambiarValorSelector(idSelector, nuevoValor) {
@@ -524,7 +505,7 @@ function crearSel1(){
 // ── Favoritos (favoritos.js, opcional) ──
 // Misma regla que clave_evento() en paso1-merge.sh: palabras del nombre sin
 // relleno, genero (tango, marathon...) ni numeros/años, ordenadas, + ciudad.
-const FAV_ICONO={home:'&#128726;',go:'&#128522;',think:'&#129300;',moreinfo:'&#10067;'};
+const FAV_ICONO={home:'&#128726;',go:'&#128522;',think:'&#11088;',moreinfo:'&#10067;'};
 const FAV_STOP=new Set(['tango','practica','pratik','serata','festival','marathon','maratona','club','encuentro']);
 const FAV_RELLENO=new Set(('de del la el los las lo un una unos unas al y e o u the a an and of in on at to for with by or '+
 	'le les du des une et aux au sur dans avec di da il i gli con per della dei der die das und mit im fur von zur zum '+
@@ -545,10 +526,21 @@ function claveFav(nombre,ciudad){
 
 const favMapa=new Map();
 
+const FAV2=['home','go'];   // estados que se ven con ?fav2
+
+function pasaFav2(item){
+	// Con ?fav2 solo pasan los eventos favoritos en estado FAV2 (home/go).
+	// Sin ?fav2, o si favoritos.js no ha cargado, pasa todo.
+	if (parametros.fav2==undefined || !favMapa.size){return true}
+	return String(item.tipo).startsWith('event') &&
+		FAV2.includes(favMapa.get(claveFav(item.nombre,item.ciudad)));
+}
+
 function cargaFavoritos(){
-	// Carga favoritos.js solo con ?fav en la url (en local y en la web).
+	// Carga favoritos.js solo con ?fav o ?fav2 en la url (en local y en la web).
+	// ?fav2 ademas filtra el listado a los favoritos home/go (pasaFav2).
 	// Si no existe, no pasa nada: el listado queda como sin favoritos.
-	if (parametros.fav==undefined){return}
+	if (parametros.fav==undefined && parametros.fav2==undefined){return}
 	const s=document.createElement('script');
 	s.src='favoritos.js';
 	s.onload=function(){
@@ -561,7 +553,7 @@ function cargaFavoritos(){
 	document.head.appendChild(s);
 }
 
-// ── Fotos (import-imagen/lista.js, opcional) ──
+// ── Fotos (import/src.imagen/fotos.js, opcional) ──
 // fotosPerfil = ['perfil_Nombre_Apellido.jpg',...]: 'perfil_' + nombre con todo
 // lo que no sea letra, numero o '-' cambiado por '_' (ej. 'Angel & Lorena' -> 'perfil_Angel___Lorena.jpg').
 const fotoSet=new Set();
@@ -577,14 +569,14 @@ function fbkey(u){
 	return p.replace(/[^\w.-]/gu,'_').toLowerCase();
 }
 function iconoFoto(nombre,url){
-	// Enlace 👤 a import-imagen/fotos/<fichero> si la persona tiene foto; si no, ''.
+	// Enlace 👤 a import/src.imagen/fotos/<fichero> si la persona tiene foto; si no, ''.
 	// Busca perfil_<usuarioFB> y si no perfil_<nombre>, en jpg/webp/png.
 	const claves=[];
 	if (/facebook\.com\//.test(url||'')){ const k=fbkey(url); if (k) claves.push('perfil_'+k); }
 	claves.push('perfil_'+String(nombre).replace(/[^\p{L}\p{N}\-]/gu,'_'));
 	let f='';
 	for (const k of claves) for (const e of ['jpg','webp','png']) if (!f && fotoSet.has(k+'.'+e)) f=k+'.'+e;
-	return f ? '<a href="import-imagen/fotos/'+encodeURIComponent(f)+
+	return f ? '<a href="import/src.imagen/fotos/'+encodeURIComponent(f)+
 		'" onclick="return toggleFoto(this)">'+icon('user')+'</a>' : '';
 }
 function toggleFoto(a){
@@ -1405,6 +1397,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 
 		for (const item of entradas) {
 			if (!pasaFiltros(item,s2,s3,s4)){continue}
+			if (!pasaFav2(item)){continue}
 			filasVisibles.add(item.fila);
 
 			contadorL2+=1;
@@ -1561,17 +1554,22 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 		let year=o.fechas.split('.')[4];
 		const mes=parseInt(o.fechas.split('.')[1]);
 		const dia=o.fechas.split('.')[3].split('-')[0];
-		if (new Date(year,mes,dia)<actual){ year=actual.getFullYear(); }
-		if (new Date(year,mes,dia)<actual){ year++; }
+		// dia sin fijar (EVT.mes.MES.?.año): va al principio de su mes, con
+		// '??', y no pasa hasta que acaba el mes
+		const sinDia=(dia=='?');
+		const fin=(y)=>(sinDia ? new Date(y,mes+1,0) : new Date(y,mes,dia));
+		if (fin(year)<actual){ year=actual.getFullYear(); }
+		if (fin(year)<actual){ year++; }
 		// arrastrado: la edición publicada ya pasó y se repite en el año
 		// siguiente hasta que exista la nueva (fecha estimada)
 		o.estimado=(String(year)!=o.fechas.split('.')[4]);
-		const f3=new Date(year,mes,dia);
+		const f3=new Date(year,mes,sinDia ? 1 : dia);
 		o.ofecha=f3;
 		o.colorMes=mes;
 
-		o.pfecha=f3.getFullYear()+'.'+meses[f3.getMonth()]+' '+dia.toString().padStart(2, '0');
-		o.pfecha2='&nbsp'.repeat(9)+dia.toString().padStart(2, '0');
+		const pdia=(sinDia ? '??' : dia.toString().padStart(2, '0'));
+		o.pfecha=f3.getFullYear()+'.'+meses[f3.getMonth()]+' '+pdia;
+		o.pfecha2='&nbsp'.repeat(9)+pdia;
 		entradas.push(o);
 	}
 
@@ -1605,6 +1603,8 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 		      s1!=item.pais
 		){continue}
 
+		if (!pasaFav2(item)){continue}
+
 		filasVisibles.add(item.fila);
 		contadorL1+=1;
 
@@ -1622,7 +1622,7 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 		let stipo='';
 		if (tipo!=''){
 			stipo='<span class="stipo3" style="color:#444;background-color:'+colorTipo.get(item.tipo)+
-			'">'+esc(tipo)+'&nbsp;</span>';
+			'">'+esc(tipo)+'&nbsp;'.repeat(Math.max(1,10-tipo.length))+'</span>';   // relleno a 10: columnas alineadas al copiar/pegar
 		}
 
 		let span2='';
@@ -1637,7 +1637,7 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 
 		if (item.pfecha!='') {
 			sfecha='<span class="fechaCompacta" style="background-color:'+colorMes[item.colorMes]+
-			'">'+fff+'</span>';
+			'">'+fff+'&nbsp;</span>';
 		}
 
 		let nombre=item.nombre;
@@ -1645,7 +1645,8 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 		if (nombre.length>corte){
 			nombre=nombre.substring(0,corte)+' ..';
 		}
-		let snombre='<span>'+iconoFav(item.nombre,item.ciudad)+esc(nombre)+'</span>';
+		// sin favorito (y con favoritos cargados): 3 blancos en el hueco del emoji
+		let snombre='<span>'+(iconoFav(item.nombre,item.ciudad)||(favMapa.size ? '&nbsp;'.repeat(3) : ''))+esc(nombre)+'</span>';
 
 		item.texto=sfecha+stipo+'&nbsp;'+snombre+'&nbsp;('+esc(item.ciudad)+','+esc(item.pais)+')'+
 			(item.estimado ? '&nbsp;<span title="fecha estimada: repite la edición anterior">&#9203;</span>' : '');
