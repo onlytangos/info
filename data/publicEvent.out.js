@@ -1743,7 +1743,7 @@ var publicEvent=[
   ["Asia","South Korea","Chuncheon","event marathon","ChunCheon Tango Marathon","37.880506#127.727761#South Korea, Chuncheon-si#org:Gaea Kim,org:John & White Bear","EVT.9.OCT.2-5.2026","https://www.facebook.com/groups/413601948060266"],
   ["Asia","South Korea","Busan","milonga","Gato milonga","#org:Blanc Jo","-","-"],
   ["Asia","South Korea","Seoul","milonga","Loca","Ocho#org:Seon Min Lee","REG.6.SAT.W.20:00-02:00","https://www.facebook.com/ocho.tango.5"],
-  ["Asia","South Korea","Busan","event marathon","Busan Tango Marathon","35.173112#129.071412#South Korea, Busan#org:Moses Park (moses park)","EVT.5.JUN.23-28.2027","https://www.facebook.com/moses.park.461311"],
+  ["Asia","South Korea","Busan","event marathon","Busan Tango Marathon","35.173112#129.071412#South Korea, Busan#org:Moses Park (moses park)","EVT.5.JUN.23-28.2027","https://www.facebook.com/groups/242833006140226"],
   ["Asia","South Korea","Changwon","event festival","Cherry Blossoms Milonga","lat#lon#dir#org:Han Pa (Han pacino)","EVT.2.MAR.25-28.2027","https://www.facebook.com/groups/1278008533337836"],
   ["Asia","South Korea","Busan","event festival","RoyBeDDong","lat#lon#dir#org:Rob Roy (롭로이),org:Kwang Seob Kim (so ddong),org:Beto Kim (땅고지기)","EVT.11.DEC.18-20.2026",""],
   ["Asia","South Korea","Jeju","event festival","Jeju Summ Milonga","lat#lon#dir#org:Augusto Kim (태양),org:Kim Seong Gong","EVT.7.AUG.21-23.2026","https://www.facebook.com/groups/1653538918229753/"],
