@@ -715,9 +715,10 @@ function crearSelType(){
 			addTiposEvento(select,cuentaTipoEVT(),false);
 		}else{
 			let cuentas=cuentaCol2(colTipo);
+			createOpt(select,'*','events',cuentaFilasTipo('*'));     // todos los eventos: event, venue y milonga
+			createOpt(select,'!','people',cuentaFilasTipo('!'));   // todas las personas, con o sin rol
 			createOpt(select,'event','event*',sumaCuenta(cuentas,'event'));
 			addTiposEvento(select,cuentas,true);
-			createOpt(select,'!','people',cuentaFilasTipo('!'));   // todas las personas, con o sin rol
 			createOpt(select,'+'+rolesPeople.join(','),'peopleRol',cuentaFilasTipo('+'+rolesPeople.join(',')));
 			createOpt(select,'+'+rolesPublicos.join(','),'peoplePublic',cuentaFilasTipo('+'+rolesPublicos.join(',')));
 			createOpt(select,'!'+rolesPublicos.join(','),'peoplePrivate',cuentaFilasTipo('!'+rolesPublicos.join(',')));
@@ -1201,6 +1202,8 @@ function filtra(cadena1,cadena2){
 	//  '+r1,r2' : tiene alguno de esos roles (peoplePublic)
 	//  '!r1,r2' : persona (no evento/venue/milonga) sin ninguno de esos roles (peoplePrivate)
 	//  '!'      : sin lista, cualquier persona (people)
+	//  '*'      : cualquier evento, venue o milonga (events)
+	if (cadena1=='*'){ return esEvento(cadena2) ? 1 : -1; }
 	if (cadena1[0]=='+' || cadena1[0]=='!'){
 		const roles=String(cadena2).split(',').map(r => r.trim());
 		const hay=cadena1.slice(1).split(',').some(r => roles.includes(r));
