@@ -1,8 +1,3 @@
-/*
-
-
-
-*/
 
 var ROLES = {
   "art": {"publico": 1, "desc": "artista",                  "nombre": "artista",     "color": "#e4ddff", "colorPeople": "#e4adff"},
@@ -13,10 +8,10 @@ var ROLES = {
   "djm": {"publico": 1, "desc": "pasa música",              "nombre": "tangoDJ",     "color": "#db94ff", "colorPeople": "#db94ff"},
   "wrt": {"publico": 1, "desc": "crea contenido de tango",  "nombre": "writer",      "color": "#f9fea0", "colorPeople": "#F9EE90"},
   "tch": {"publico": 1, "desc": "teacher",                  "nombre": "teacher",     "color": "#b3f0e0", "colorPeople": "#b3f0e0"},
-  "mil": {"publico": 0, "desc": "milonguera, baila bien",   "nombre": "milonguera",  "color": "#ffccff", "colorPeople": "#ffccff"},
+  "mil": {"publico": 0, "desc": "milonguera bien conocida", "nombre": "milonguera",  "color": "#ffccff", "colorPeople": "#ffccff"},
   "com": {"publico": 0, "desc": "compañía",                 "nombre": "compañía",    "color": "#ffcccc", "colorPeople": "#ffcccc"},
   "vip": {"publico": 0, "desc": "mil+com+inf",              "nombre": "mil+com+inf", "color": "#ff9999", "colorPeople": "#ff9999"},
-  "dan": {"publico": 0, "desc": "dancer regular, no mil",   "nombre": "dancer",      "color": "#cfe8ff", "colorPeople": "#cfe8ff"},
+  "dan": {"publico": 0, "desc": "dancer regular conocida",  "nombre": "dancer",      "color": "#cfe8ff", "colorPeople": "#cfe8ff"},
   "inf": {"publico": 0, "desc": "proveedor de información", "nombre": "info",        "color": "#F9AA90", "colorPeople": "#F9AA90"},
   "non": {"publico": 0, "desc": "no interesa",              "nombre": "",            "color": "#e0e0e0", "colorPeople": "#e0e0e0"}
 };

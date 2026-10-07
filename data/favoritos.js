@@ -1,6 +1,6 @@
 /*
 
-favoritos.js : estado de los eventos favoritos (va junto a index.htm)
+favoritos.js : estado de los eventos favoritos (en data/, lo lee index.htm)
 
 Cada fila: [nombre, ciudad, estado], tal como salen en el listado.
 Se compara normalizado: da igual mayúsculas, tildes, (paréntesis),
