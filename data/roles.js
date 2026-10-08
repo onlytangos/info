@@ -13,6 +13,7 @@ var ROLES = {
   "vip": {"publico": 0, "desc": "mil+com+inf",              "nombre": "mil+com+inf", "color": "#ff9999", "colorPeople": "#ff9999"},
   "dan": {"publico": 0, "desc": "dancer regular conocida",  "nombre": "dancer",      "color": "#cfe8ff", "colorPeople": "#cfe8ff"},
   "inf": {"publico": 0, "desc": "proveedor de información", "nombre": "info",        "color": "#F9AA90", "colorPeople": "#F9AA90"},
+  "bed": {"publico": 0, "desc": "alojamiento",              "nombre": "alojamiento", "color": "#d9f2c4", "colorPeople": "#d9f2c4"},
   "non": {"publico": 0, "desc": "no interesa",              "nombre": "",            "color": "#e0e0e0", "colorPeople": "#e0e0e0"}
 };
 

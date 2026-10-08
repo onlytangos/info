@@ -252,7 +252,7 @@ a#link{
 <script id='fuente1' src='data/publicEvent.out.js'></script>
 <script id='fuente2' src='data/publicPeople.out.js'></script>
 <script id='fuente3' src='data/privatePeople.out.js'></script>
-<script id='fuente4' src='import/src.page/fotos.js'></script>  <!-- fotosPerfil: fotos de import/src.page/fotos/ (opcional) -->
+<script id='fuente4' src='import/src.getpages/fotos.js'></script>  <!-- fotosPerfil: fotos de import/src.getpages/fotos/ (opcional) -->
 <!-- favoritos.js se carga bajo demanda: cargaFavoritos() -->
 
 
@@ -332,8 +332,7 @@ function inicio(){
 		titulo1='OnlyTangoInfo';
 		titulo2='<a href="https://www.facebook.com/profile.php?id=100093497583670" target="_blank">by KoKoTango</a>'+
 			// versión: privada (local, con privatePeople.out.js) o pública (la web, sin él), como caras.htm
-			'<br><small>'+(typeof privatePeople!='undefined' ? 'private version' : 'public version')+'</small>'+
-			'<br><a href="https://www.facebook.com/profile.php?id=100093497583670" target="_blank">envía un mensaje con tus urls</a>';
+			'<br><small>'+(typeof privatePeople!='undefined' ? 'private version' : 'public version')+'</small>';
 		colorTipo.set('milonga','#adf5d7');
 		colorTipo.set('venue','#fae3ad');
 		colorTipo.set('event','#e5f9ff');
@@ -438,8 +437,8 @@ function exportar(){
 	// Descarga export.json con las filas que se ven en el listado (personas,
 	// eventos, venues y milongas), en el mismo formato que los demas res*.json
 	// del import: array JSON, una fila de 8 campos por linea.
-	// Se copia a import/src.page/export.json, una de las entradas de
-	// import/src.page/index.sh (no lo lee el import).
+	// Se copia a import/src.getpages/export.json, una de las entradas de
+	// import/src.getpages/index.sh (no lo lee el import).
 	const filas=datos.filter(f => filasVisibles.has(f));
 	if (!filas.length){ return }
 	const cuerpo=filas.map(f => '  ['+f.map(v => JSON.stringify(v)).join(', ')+']').join(',\n');
@@ -557,10 +556,10 @@ function cargaFavoritos(){
 	document.head.appendChild(s);
 }
 
-// ── Fotos (import/src.page/fotos.js, opcional) ──
+// ── Fotos (import/src.getpages/fotos.js, opcional) ──
 // fotosPerfil = ['perfil_Nombre_Apellido.jpg',...]: 'perfil_' + nombre con todo
 // lo que no sea letra, numero o '-' cambiado por '_' (ej. 'Angel & Lorena' -> 'perfil_Angel___Lorena.jpg').
-// fotosPortada = ['portada_<fbkey>.jpg',...]: fotos de portada de import/src.page/fotos2/
+// fotosPortada = ['portada_<fbkey>.jpg',...]: fotos de portada de import/src.getpages/fotos2/
 // (los eventos solo tienen esta); se usa si no hay foto de perfil.
 const fotoSet=new Set();
 const portadaSet=new Set();
@@ -569,7 +568,7 @@ function cargaFotos(){
 	if (typeof fotosPortada!='undefined'){ for (const f of fotosPortada){ portadaSet.add(f); } }
 }
 function fbkey(u){
-	// clave de la foto de una url de FB (igual que fbkey de import/src.page/page.py y revisar.html):
+	// clave de la foto de una url de FB (igual que fbkey de import/src.getpages/page.py y revisar.html):
 	// perfil -> usuario o id; evento -> event_<id>; grupo -> group_<nombre>;
 	// publicacion de grupo -> post_<id>; '' si no identifica una pagina
 	u=String(u||'').trim();
@@ -587,7 +586,7 @@ function fbkey(u){
 	return k.replace(/[^\w.-]/gu,'_').toLowerCase();
 }
 function webkey(u){
-	// clave de la foto de una url que no es de FB (igual que webkey de import/src.page/page.py): web_<sitio_ruta>
+	// clave de la foto de una url que no es de FB (igual que webkey de import/src.getpages/page.py): web_<sitio_ruta>
 	u=String(u||'').trim();
 	if (!/^https?:\/\//i.test(u) || /^https?:\/\/([a-z]+\.)?facebook\.com\//.test(u)) return '';
 	const s=u.toLowerCase().replace(/^https?:\/\/(www\.)?/,'').split('#')[0].replace(/\/+$/,'');
@@ -595,8 +594,8 @@ function webkey(u){
 }
 function iconoFoto(nombre,url){
 	// Enlace 👤 a la foto de la persona o evento; si no tiene, ''.
-	// Busca perfil_<usuarioFB> y si no perfil_<nombre> en import/src.page/fotos/;
-	// si no hay, portada_<usuarioFB> (o portada_web_<sitio_ruta> si la url no es de FB) en import/src.page/fotos2/. En jpg/webp/png.
+	// Busca perfil_<usuarioFB> y si no perfil_<nombre> en import/src.getpages/fotos/;
+	// si no hay, portada_<usuarioFB> (o portada_web_<sitio_ruta> si la url no es de FB) en import/src.getpages/fotos2/. En jpg/webp/png.
 	const k=/facebook\.com\//.test(url||'') ? fbkey(url) : webkey(url);
 	const claves=[];
 	if (k) claves.push('perfil_'+k);
@@ -604,7 +603,7 @@ function iconoFoto(nombre,url){
 	let f='';
 	for (const c of claves) for (const e of ['jpg','webp','png']) if (!f && fotoSet.has(c+'.'+e)) f='fotos/'+c+'.'+e;
 	if (k) for (const e of ['jpg','webp','png']) if (!f && portadaSet.has('portada_'+k+'.'+e)) f='fotos2/portada_'+k+'.'+e;
-	return f ? '<a href="import/src.page/'+f.split('/')[0]+'/'+encodeURIComponent(f.split('/')[1])+
+	return f ? '<a href="import/src.getpages/'+f.split('/')[0]+'/'+encodeURIComponent(f.split('/')[1])+
 		'" onclick="return toggleFoto(this)">'+icon('user')+'</a>' : '';
 }
 function toggleFoto(a){
