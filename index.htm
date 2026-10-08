@@ -341,6 +341,7 @@ function inicio(){
 		colorTipo.set('event encuentro','#7db1ff');
 		colorTipo.set('event marathon','#acccfc');
 		colorTipo.set('event championship','#ff6961');
+		colorTipo.set('list','#e0d4f7');
 		// roles de people (roles.js)
 		for (const r in ROLES){ colorTipo.set(r,ROLES[r].color); }
 	}
@@ -628,9 +629,11 @@ function iconoFav(nombre,ciudad){
 }
 
 function esEvento(tipo){
-	// true si la fila es evento, venue o milonga (primera palabra del tipo);
+	// true si la fila es evento, venue, milonga o list (primera palabra del tipo);
 	// si no, es una persona. Unica regla para distinguirlos en todo el codigo.
-	return ['event','venue','milonga'].includes(String(tipo).split(' ')[0]);
+	// list: fuente de informacion (web con milongas, eventos...); las mundiales
+	// tienen area 'all' y pais y ciudad '-'.
+	return ['event','venue','milonga','list'].includes(String(tipo).split(' ')[0]);
 }
 
 function esc(s){
@@ -695,7 +698,7 @@ function addTiposEvento(select,cuentas,conPrefijo){
 	// en 'cuentas', en orden alfabetico. Compartido por las vistas countries y
 	// annual; 'conPrefijo' antepone el codigo de 3 letras (ej. 'MAR.marathon').
 	claves(cuentas).forEach(x => {
-		if (x=='event' || !esEvento(x)){return}
+		if (x=='event' || x=='list' || !esEvento(x)){return}   // list: opcion propia, al inicio
 		let y=x.replace('event ','').trim();
 		if (y=='championship'){y='champion'}
 		createOpt(select,x,conPrefijo?get3(y)+'.'+y:y,cuentas.get(x)||0);
@@ -727,6 +730,7 @@ function crearSelType(){
 			addTiposEvento(select,cuentaTipoEVT(),false);
 		}else{
 			let cuentas=cuentaCol2(colTipo);
+			createOpt(select,'list','list',sumaCuenta(cuentas,'list'));   // fuentes de informacion
 			createOpt(select,'*','events',cuentaFilasTipo('*'));     // todos los eventos: event, venue y milonga
 			createOpt(select,'!','people',cuentaFilasTipo('!'));   // todas las personas, con o sin rol
 			createOpt(select,'event','event*',sumaCuenta(cuentas,'event'));
@@ -775,6 +779,7 @@ function poblarAreas(select){
 	select.appendChild(optionDefault);
 	let cuentas=cuentaCol(colArea);
 	claves(cuentas).forEach(x => {
+		if (x=='all'){return}   // area de las list mundiales: 'all' en los filtros es 'sin filtro'
 		const opt=document.createElement('option');
 		opt.value=x;
 		opt.textContent=opTxt(x,cuentas.get(x)||0);
@@ -1214,8 +1219,8 @@ function filtra(cadena1,cadena2){
 	//  '+r1,r2' : tiene alguno de esos roles (peoplePublic)
 	//  '!r1,r2' : persona (no evento/venue/milonga) sin ninguno de esos roles (peoplePrivate)
 	//  '!'      : sin lista, cualquier persona (people)
-	//  '*'      : cualquier evento, venue o milonga (events)
-	if (cadena1=='*'){ return esEvento(cadena2) ? 1 : -1; }
+	//  '*'      : cualquier evento, venue o milonga (events), no las list
+	if (cadena1=='*'){ return (esEvento(cadena2) && cadena2!='list') ? 1 : -1; }
 	if (cadena1[0]=='+' || cadena1[0]=='!'){
 		const roles=String(cadena2).split(',').map(r => r.trim());
 		const hay=cadena1.slice(1).split(',').some(r => roles.includes(r));
@@ -1242,16 +1247,26 @@ function borraTxt(cadena, palabrasAEliminar){
 
 function listaPaises(s0,s1){
 	// Paises a recorrer en el render segun el area (s0) y el pais (s1) elegidos.
+	// Con area, tambien '-': ahi van las list del area y las mundiales (enAreaSin).
 	if (s1!='' && s1!='all'){ return [s1]; }
-	return s0=='' ? damecol(colPais) : damecol1(colPais,colArea,s0);
+	if (s0==''){ return damecol(colPais); }
+	const l=damecol1(colPais,colArea,s0);
+	return l.includes('-') ? l : l.concat('-');
 }
 
-function omitirPais(area,s0,s1,s2){
+function omitirPais(area,s0,s1,s2,s3){
 	// '-' y '.' son ubicaciones vacias (people.private): se muestran solo si no
-	// hay ningun filtro activo; con filtro se omiten. Excepcion: si el propio
-	// filtro de area pedido es '-', no se debe ocultar ese grupo.
-	if (s0=='-'){return false}
+	// hay ningun filtro activo; con filtro se omiten. Excepciones: si el propio
+	// filtro de area pedido es '-', o si el tipo es list (las de un area o
+	// mundiales no tienen pais), no se debe ocultar ese grupo.
+	if (s0=='-' || (s3=='list' && area=='-' && s1=='' && s2=='')){return false}
 	return (area=='-'||area=='.') && (s0!=''||s1!=''||s2!='');
+}
+
+function enAreaSin(item,area,s0){
+	// En el grupo sin pais ('-'), con un area elegida, solo las filas de esa
+	// area y las mundiales (area 'all'): el grupo junta filas de todas las areas.
+	return area!='-' || s0=='' || s0=='-' || [s0,'all'].includes(item.fila[colArea]);
 }
 
 function cabeceraPais(results,area){
@@ -1423,7 +1438,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 	let contadorL1=0;
 
 	for (const area of listaPaises(s0,s1)) {
-		if (omitirPais(area,s0,s1,s2)){continue}
+		if (omitirPais(area,s0,s1,s2,s3)){continue}
 		const entradas=damelista(area);
 		if (entradas.length==0){continue}
 		const header=cabeceraPais(results,area);
@@ -1431,6 +1446,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 
 		for (const item of entradas) {
 			if (!pasaFiltros(item,s2,s3,s4)){continue}
+			if (!enAreaSin(item,area,s0)){continue}
 			if (!pasaFav2(item)){continue}
 			filasVisibles.add(item.fila);
 
@@ -1493,7 +1509,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 				' : '+span3+' : '+(span4||scoment)+(sfoto ? ' '+sfoto : '');
 				span.innerHTML=item.texto;
 			}else{
-				let scity=item.ciudad!='' ? esc(item.ciudad)+',&nbsp;' : '';
+				let scity=(item.ciudad!='' && item.ciudad!='-') ? esc(item.ciudad)+',&nbsp;' : '';
 				const fav=String(item.tipo).startsWith('event') ? iconoFav(item.nombre,item.ciudad) : '';
 				// enlace ↗️ dentro del paréntesis, junto a fecha o ▶️
 				let slink='';
