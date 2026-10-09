@@ -154,7 +154,7 @@ var publicPeople=[
   ["Asia","South Korea","Seoul","wrt","Tango Handa","https://www.youtube.com/@tangohanda/videos","-","https://www.facebook.com/tangohanda"],
   ["Asia","South Korea","Seoul","org","Eddie Kang","-","-","https://www.facebook.com/eddie.kang.77"],
   ["-","-","-","p25","Ezequiel Núñez","🇯🇵🥇D’arienzoCup2019#🥇AsianChampionship2021#🇨🇳🥇Chengdu#🇹🇷T2iWorldCup#JPTangoDePistaFestival","-","https://www.facebook.com/ezechantokyo"],
-  ["Asia","South Korea","Seoul","art,djm,p26","Monica Kim","https://www.youtube.com/watch?v=U3FdsKL6JsE&t=28s#https://www.youtube.com/watch?v=2AaceYBndUk","-","https://www.facebook.com/monica.kim.169"],
+  ["Asia","South Korea","Seoul","art,djm,p26","Monica Kim","https://www.youtube.com/watch?v=U3FdsKL6JsE&t=28s","-","https://www.facebook.com/monica.kim.169"],
   ["Europe","Italy","Cagliari","djm","Rita Rolando","Organizzatore Milonga \"Suerte Loca\" a Cagliari e Tango Dj","-","https://www.facebook.com/rita.rolando"],
   ["Europe","Spain","Madrid","art,djm,tch","Fernando Nahmijas","Tango","-","https://www.facebook.com/fernando.nahmijas"],
   ["Europe","Spain","Benidorm","art,org,djm","Victoria Huang","Import Export#Complutense University of Madrid","-","https://www.facebook.com/victoria.huang.10"],
@@ -289,5 +289,6 @@ var publicPeople=[
   ["-","-","-","p26","Victor","-","-","-"],
   ["-","-","-","p26","Yijun","-","-","-"],
   ["-","-","-","p26","Yuni","-","-","-"],
+  ["-","-","-","p26","Lina Kim","https://www.youtube.com/watch?v=2AaceYBndUk","-","-"],
 ];
 var publicPeopleFecha="2026-10-09";

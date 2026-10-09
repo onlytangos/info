@@ -673,6 +673,28 @@ function icon(nombre,size){
 		'aria-hidden="true">'+(ICONS[nombre]||'')+'</svg>';
 }
 
+// urls en un texto: con http(s)://, con www. o un dominio suelto (tangoenvinilo.com, cafe.naver.com/x)
+const RE_URL=/(?:https?:\/\/|www\.)[^\s|#]+|(?<![@\w.\/-])[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|kr|es|fr|it|de|tw|jp|cn|be|io|me|tv|info|ar|uy|ly)(?:\/[^\s|#]*)?(?![\w@.-])/gi;
+function conHttp(u){ return /^https?:\/\//i.test(u) ? u : 'https://'+u; }
+function claveUrl(u){ return conHttp(u).replace(/^https?:\/\/(www\.)?/i,'').replace(/\/+$/,'').toLowerCase(); }
+function urlsDe(subcampos,excluir){
+	// urls de una lista de textos, sin repetir y sin la url excluir (la del ↗️)
+	const vistas=new Set([excluir ? claveUrl(excluir) : '']), res=[];
+	for (const x of subcampos) for (const u of String(x).match(RE_URL)||[]){
+		const k=claveUrl(u);
+		if (!vistas.has(k)){ vistas.add(k); res.push(conHttp(u)); }
+	}
+	return res;
+}
+function sinUrls(t){
+	// el texto sin urls ni separadores sueltos en los extremos
+	return String(t).replace(RE_URL,' ').replace(/\s+/g,' ').replace(/^[\s,;|\/:-]+|[\s,;|\/:-]+$/g,'');
+}
+function iconoUrl(u){
+	// enlace con icono: ▶️ si la url es de YouTube, 🌐 si es de otra web
+	return '<a href="'+u.replace(/"/g,'%22')+'" target="_blank">'+
+		icon(/^https?:\/\/([a-z0-9-]+\.)*(youtube\.com|youtu\.be)\//i.test(u) ? 'play' : 'web')+'</a>';
+}
 function spanRoles(tipo,sep){
 	// Lista de roles ('org,art,p26') con una etiqueta de color por rol
 	// (colorTipo, gris si no está), en orden alfabético ('art,org,p26');
@@ -1511,21 +1533,21 @@ function renderCountries(s0,s1,s2,s3,s4){
 				let prt=tmp.split('.');
 				if (prt[0]=='EVT' || prt[0]=='REG'){
 					span4='<div class="itemLinea">'+prt[2]+'.'+prt[4]+'</div>';
-				}else if (/^https?:\/\//.test(tmp)){
-					span4=tmp.split(/\s+/).filter(u => /^https?:\/\//.test(u)).map(u =>
-						'<a href="'+u.replace(/"/g,'%22')+'" target="_blank">'+icon('play')+'</a>').join(' ');
 				}else{
-					scoment='<div class="itemLinea">'+esc(tmp)+'</div>';
+					// las urls van con icono (▶️ YouTube, 🌐 otra web), no en el texto del comentario
+					span4=urlsDe([tmp]).map(iconoUrl).join(' ');
+					const resto=sinUrls(tmp);
+					if (resto) scoment='<div class="itemLinea">'+esc(resto)+'</div>';
 				}
 			}
 			if (app=='people'){
 				// campo 6: datos publicos separados por #; el texto, como antes, y las urls con icono (▶️ YouTube, 🌐 otra web)
 				const pub=(item.autor!=''&&item.autor!='-') ? String(item.autor).split('#') : [];
-				const urls=pub.filter(x => /^https?:\/\//.test(x));
-				const textos=pub.filter(x => x.trim() && !/^https?:\/\//.test(x));
+				// urls en cualquier parte del subcampo (sin repetir); el texto, sin urls
+				const urls=urlsDe(pub,item.url);
+				const textos=pub.map(sinUrls).filter(Boolean);
 				span3=textos.length ? '<div class="itemLinea">'+esc(textos.join(', '))+'&nbsp;</div>' : '';
-				span3+=urls.map(u => '<a href="'+u.replace(/"/g,'%22')+'" target="_blank">'+
-					icon(/youtu/.test(u) ? 'play' : 'web')+'</a>').join(' ');
+				span3+=urls.map(iconoUrl).join(' ');
 				const sfoto=iconoFoto(item.nombre,item.url);
 				item.texto=span2+' : '+esc(item.nombre)+' : '+span1.replace('event ','')+
 				' : '+span3+' : '+(span4||scoment)+(sfoto ? ' '+sfoto : '');
@@ -1539,12 +1561,14 @@ function renderCountries(s0,s1,s2,s3,s4){
 					slink='<a href="'+item.url.replace(/"/g,'%22')+
 						'" target="_blank">'+icon('external')+'</a>';
 				}
-				// 🌐: www, último subcampo de varios si es una url (la web que no es de FB)
-				const www=String(item.autor||'').split('#').pop().trim();
-				const swww=/^https?:\/\//.test(www) ? '<a href="'+www.replace(/"/g,'%22')+
-					'" target="_blank">'+icon('web')+'</a>' : '';
+				// ▶️/🌐: urls de cualquier subcampo de varios (sin repetir ni la del ↗️)
+				const varios=(item.autor!=''&&item.autor!='-') ? String(item.autor).split('#') : [];
+				const urls=urlsDe(varios,item.url);
+				const swww=urls.map(iconoUrl).join(' ');
+				// www para la foto: último subcampo de varios si es una url (la web que no es de FB)
+				const www=varios.length ? varios[varios.length-1].trim() : '';
 				// foto 👤: personas (perfil o, si no hay, portada) y eventos (portada, por la url o la www)
-				const sfoto=iconoFoto(item.nombre,item.url) || (swww ? iconoFoto(item.nombre,www) : '');
+				const sfoto=iconoFoto(item.nombre,item.url) || (/^https?:\/\//.test(www) ? iconoFoto(item.nombre,www) : '');
 				// (fecha o ▶️ 👤 ↗️ 🌐) y detras (comentario); sin parentesis vacios
 				const dentro=[span4,sfoto,slink,swww].filter(Boolean).join(' ');
 				// personas: roles entre parentesis detras del nombre; eventos: etiqueta delante
@@ -1553,7 +1577,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 				// roles separados por espacio (sin comas)
 				const sroles=(esPersona && span1) ? '&nbsp;('+spanRoles(item.tipo,' ')+')' : '';
 				// campo 5 (venue / escuela / evento) entre []
-				const autor=(item.autor!=''&&item.autor!='-') ? item.autor.split('#')[0] : '';
+				const autor=sinUrls(varios[0]||'');
 				const sautor=autor ? '&nbsp;['+esc(autor)+']' : '';
 				// unica coma: detras de la ciudad
 				item.texto=delante+scity+
