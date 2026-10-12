@@ -253,25 +253,16 @@ a#link{
 }
 </style>
 
-<script src='data/roles.js'></script>  <!-- ROLES: roles de people, compartido con comun.py -->
+<script src='data/aux.js'></script>  <!-- ROLES y favoritos, compartido con comun.py -->
 <script id='fuente1' src='data/publicEvent.out.js'></script>
 <script id='fuente2' src='data/publicPeople.out.js'></script>
 <script id='fuente3' src='data/privatePeople.out.js'></script>
-<script id='fuente4' src='import/src.openurl/fotos.js'></script>  <!-- fotosPerfil: fotos de import/src.openurl/fotos/ (opcional) -->
-<!-- favoritos.js se carga bajo demanda: cargaFavoritos() -->
+<script id='fuente4' src='review/fotoid.js'></script>  <!-- fotosId: fotos de review/foto0,1,2,9/ (opcional) -->
 
 
 <script>
 
-// indices de los 8 campos de cada fila de datos
-const colArea=0;
-const colPais=1;
-const colCiudad=2;
-const colTipo=3;
-const colNombre=4;
-const colAutor=5;
-const colFecha=6;
-const colUrl=7;
+// indices de los 8 campos de cada fila de datos: CAMPO (data/aux.js)
 
 const meses=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 const opcionesVistas=['countries','annual','regular'];
@@ -347,14 +338,14 @@ function inicio(){
 		colorTipo.set('event marathon','#acccfc');
 		colorTipo.set('event championship','#ff6961');
 		colorTipo.set('list','#e0d4f7');
-		// roles de people (roles.js)
+		// roles de people (aux.js)
 		for (const r in ROLES){ colorTipo.set(r,ROLES[r].color); }
 	}
 	if(app=='people'){
 		datos=peopleDisponible();   // privado contiene a todos; publicPeople es un subconjunto
 		titulo1=`People &#128518; `;
 		titulo2='';
-		// roles de people (roles.js)
+		// roles de people (aux.js)
 		for (const r in ROLES){ colorTipo.set(r,ROLES[r].colorPeople); }
 	}
 	datosAll=datos;
@@ -387,8 +378,8 @@ function inicio(){
 	results.id='resultados';
 	results.style.marginTop='10px';
 	body.appendChild(results);
-	renderGo();
 	cargaFavoritos();
+	renderGo();
 	borraParametros();
 }
 
@@ -450,8 +441,7 @@ function exportar(){
 	// Descarga export.json con las filas que se ven en el listado (personas,
 	// eventos, venues y milongas), en el mismo formato que los demas res*.json
 	// del import: array JSON, una fila de 8 campos por linea.
-	// Se copia a import/src.openurl/export.json, una de las entradas de
-	// import/src.openurl/index.sh (no lo lee el import).
+	// Para mirarlo o usarlo a mano: no lo lee el import ni ningún script.
 	const filas=datos.filter(f => filasVisibles.has(f));
 	if (!filas.length){ return }
 	const cuerpo=filas.map(f => '  ['+f.map(v => JSON.stringify(v)).join(', ')+']').join(',\n');
@@ -518,7 +508,7 @@ function crearSel1(){
 	return select;
 }
 
-// ── Favoritos (favoritos.js, opcional) ──
+// ── Favoritos (var favoritos de aux.js) ──
 // Misma regla que clave_evento() en paso1-merge.sh: palabras del nombre sin
 // relleno, genero (tango, marathon...) ni numeros/años, ordenadas, + ciudad.
 const FAV_ICONO={home:'&#128726;',go:'&#128522;',think:'&#11088;',moreinfo:'&#10067;'};
@@ -546,78 +536,41 @@ const FAV2=['home','go'];   // estados que se ven con ?fav2
 
 function pasaFav2(item){
 	// Con ?fav2 solo pasan los eventos favoritos en estado FAV2 (home/go).
-	// Sin ?fav2, o si favoritos.js no ha cargado, pasa todo.
+	// Sin ?fav2, o sin favoritos, pasa todo.
 	if (parametros.fav2==undefined || !favMapa.size){return true}
 	return String(item.tipo).startsWith('event') &&
 		FAV2.includes(favMapa.get(claveFav(item.nombre,item.ciudad)));
 }
 
 function cargaFavoritos(){
-	// Carga favoritos.js solo con ?fav o ?fav2 en la url (en local y en la web).
+	// Usa los favoritos solo con ?fav o ?fav2 en la url (en local y en la web).
 	// ?fav2 ademas filtra el listado a los favoritos home/go (pasaFav2).
-	// Si no existe, no pasa nada: el listado queda como sin favoritos.
+	// Sin ellos el listado queda como sin favoritos.
 	if (parametros.fav==undefined && parametros.fav2==undefined){return}
-	const s=document.createElement('script');
-	s.src='data/favoritos.js';
-	s.onload=function(){
-		// favoritos.js: filas [nombre, ciudad, estado]
-		for (const [n,c,estado] of favoritos){
-			favMapa.set(claveFav(n,c||''),estado);
-		}
-		renderGo();
-	};
-	document.head.appendChild(s);
+	if (typeof favoritos=='undefined'){return}
+	// favoritos: filas [nombre, ciudad, estado]
+	for (const [n,c,estado] of favoritos){
+		favMapa.set(claveFav(n,c||''),estado);
+	}
 }
 
-// ── Fotos (import/src.openurl/fotos.js, opcional) ──
-// fotosPerfil = ['perfil_Nombre_Apellido.jpg',...]: 'perfil_' + nombre con todo
-// lo que no sea letra, numero o '-' cambiado por '_' (ej. 'Angel & Lorena' -> 'perfil_Angel___Lorena.jpg').
-// fotosPortada = ['portada_<fbkey>.jpg',...]: fotos de portada de import/src.openurl/fotos2/
-// (los eventos solo tienen esta); se usa si no hay foto de perfil.
-const fotoSet=new Set();
-const portadaSet=new Set();
+// ── Fotos (review/fotoid.js, opcional; lo genera review/fotoid.py) ──
+// El campo 9 de cada fila (CAMPO.idfoto) es el id de su foto (6 letras), vacío
+// si no tiene. Con ese id puede haber foto en review/foto0/ (a mano), foto1/
+// (perfil), foto2/ (portada) y foto9/ (dudosas): se toma la primera en orden
+// 0,1,2,9 (eventos 0,2,1,9: la portada antes). fotosId[carpeta] = ['<id>.jpg',...]
+const fotoSets={};
 function cargaFotos(){
-	if (typeof fotosPerfil!='undefined'){ for (const f of fotosPerfil){ fotoSet.add(f); } }
-	if (typeof fotosPortada!='undefined'){ for (const f of fotosPortada){ portadaSet.add(f); } }
+	for (const c of ['0','1','2','9']) fotoSets[c]=new Set(typeof fotosId!='undefined' && fotosId[c] ? fotosId[c] : []);
 }
-function fbkey(u){
-	// clave de la foto de una url de FB (igual que fbkey de import/src.openurl/page.py y revisar.html):
-	// perfil -> usuario o id; evento -> event_<id>; grupo -> group_<nombre>;
-	// publicacion de grupo -> post_<id>; '' si no identifica una pagina
-	u=String(u||'').trim();
-	const m=u.match(/[?&]id=(\d+)/); if (m) return m[1];
-	const p=u.replace(/^https?:\/\/([a-z]+\.)?facebook\.com\//,'').split('?')[0].split('#')[0].split('/').filter(x => x);
-	// foto suelta -> photo_<fbid>; enlace share/... -> share_<código>
-	const fb=u.match(/[?&]fbid=(\d+)/); if (fb && p.length && ['photo','photo.php'].includes(p[0].toLowerCase())) return 'photo_'+fb[1];
-	if (p.length>1 && p[0].toLowerCase()=='share') return ('share_'+p.slice(1).join('_')).replace(/[^\w.-]/gu,'_').toLowerCase();
-	if (!p.length || ['share','photo','photo.php','watch','reel','story.php','permalink.php','dyi'].includes(p[0].toLowerCase())) return '';
-	let k=p[0];
-	const ids=p.slice(1).filter(x => /^\d+$/.test(x));
-	if (p[0]=='events') k='event_'+(ids.length ? ids[ids.length-1] : (p[1]||''));
-	else if (p[0]=='groups' && p.length>1) k=(p.length>2 && ['posts','permalink'].includes(p[2]) && ids.length) ? 'post_'+ids[ids.length-1] : 'group_'+p[1];
-	else if (p[0]=='pages' && p.length>1) k=ids.length ? ids[ids.length-1] : p[1];
-	return k.replace(/[^\w.-]/gu,'_').toLowerCase();
-}
-function webkey(u){
-	// clave de la foto de una url que no es de FB (igual que webkey de import/src.openurl/page.py): web_<sitio_ruta>
-	u=String(u||'').trim();
-	if (!/^https?:\/\//i.test(u) || /^https?:\/\/([a-z]+\.)?facebook\.com\//.test(u)) return '';
-	const s=u.toLowerCase().replace(/^https?:\/\/(www\.)?/,'').split('#')[0].replace(/\/+$/,'');
-	return ('web_'+s.replace(/[^a-z0-9.-]/g,'_').replace(/_+/g,'_').replace(/^_+|_+$/g,'')).slice(0,150);
-}
-function iconoFoto(nombre,url){
+function iconoFoto(idfoto,evento){
 	// Enlace 👤 a la foto de la persona o evento; si no tiene, ''.
-	// Busca perfil_<usuarioFB> y si no perfil_<nombre> en import/src.openurl/fotos/;
-	// si no hay, portada_<usuarioFB> (o portada_web_<sitio_ruta> si la url no es de FB) en import/src.openurl/fotos2/. En jpg/webp/png.
-	const k=/facebook\.com\//.test(url||'') ? fbkey(url) : webkey(url);
-	const claves=[];
-	if (k) claves.push('perfil_'+k);
-	claves.push('perfil_'+String(nombre).replace(/[^\p{L}\p{N}\-]/gu,'_'));
-	let f='';
-	for (const c of claves) for (const e of ['jpg','webp','png']) if (!f && fotoSet.has(c+'.'+e)) f='fotos/'+c+'.'+e;
-	if (k) for (const e of ['jpg','webp','png']) if (!f && portadaSet.has('portada_'+k+'.'+e)) f='fotos2/portada_'+k+'.'+e;
-	return f ? '<a href="import/src.openurl/'+f.split('/')[0]+'/'+encodeURIComponent(f.split('/')[1])+
-		'" onclick="return toggleFoto(this)">'+icon('user')+'</a>' : '';
+	if (!idfoto) return '';
+	for (const c of (evento ? ['0','2','1','9'] : ['0','1','2','9']))
+		for (const e of ['jpg','webp','png'])
+			if (fotoSets[c] && fotoSets[c].has(idfoto+'.'+e))
+				return '<a href="review/foto'+c+'/'+idfoto+'.'+e+'" onclick="return toggleFoto(this)">'+icon('user')+'</a>';
+	return '';
 }
 function toggleFoto(a){
 	// Click en 👤: muestra la foto justo al lado del 👤; otro click en 👤 o en la foto la quita.
@@ -766,7 +719,7 @@ function crearSelType(){
 			// salia 'party(0)' y faltaban seminar/championship.
 			addTiposEvento(select,cuentaTipoEVT(),false);
 		}else{
-			let cuentas=cuentaCol2(colTipo);
+			let cuentas=cuentaCol2(CAMPO.tiporol);
 			createOpt(select,'list','list',sumaCuenta(cuentas,'list'));   // fuentes de informacion
 			createOpt(select,'*','events',cuentaFilasTipo('*'));     // todos los eventos: event, venue y milonga
 			createOpt(select,'!','people',cuentaFilasTipo('!'));   // todas las personas, con o sin rol
@@ -782,7 +735,7 @@ function crearSelType(){
 			})
 		}
 	}else if (app=='people'){
-		let cuentas=cuentaCol2(colTipo);
+		let cuentas=cuentaCol2(CAMPO.tiporol);
 		let lista=claves(cuentas);
 		createOpt(select,'+'+rolesPublicos.join(','),'peoplePublic',cuentaFilasTipo('+'+rolesPublicos.join(',')));
 		createOpt(select,'!'+rolesPublicos.join(','),'peoplePrivate',cuentaFilasTipo('!'+rolesPublicos.join(',')));
@@ -794,7 +747,7 @@ function crearSelType(){
 			select.appendChild(opt);
 		});
 	}else{
-		let cuentas=cuentaCol2(colFecha);
+		let cuentas=cuentaCol2(fechaDe);
 		let lista=claves(cuentas);
 		lista.forEach(x => {
 			if (x[0]=='('){return}
@@ -814,7 +767,7 @@ function poblarAreas(select){
 	optionDefault.value='';
 	optionDefault.textContent=fsel0;
 	select.appendChild(optionDefault);
-	let cuentas=cuentaCol(colArea);
+	let cuentas=cuentaCol(CAMPO.area);
 	claves(cuentas).forEach(x => {
 		if (x=='all'){return}   // area de las list mundiales: 'all' en los filtros es 'sin filtro'
 		const opt=document.createElement('option');
@@ -915,7 +868,7 @@ function crearSelCountry(){
 	optionDefault.value='';
 	optionDefault.textContent=fsel1;
 	select.appendChild(optionDefault);
-	let cuentas= area=='' ? cuentaCol(colPais) : cuentaCol1(colPais,colArea,area);
+	let cuentas= area=='' ? cuentaCol(CAMPO.country) : cuentaCol1(CAMPO.country,CAMPO.area,area);
 	claves(cuentas).forEach(x => {
 		if (x=='.'||x=='-'){return}
 		createOpt(select,x,x,cuentas.get(x)||0);
@@ -934,9 +887,9 @@ function crearSelCity(){
 	optionDefault.textContent=fsel2;
 	select.appendChild(optionDefault);
 	let cuentas;
-	if (pais!=''){ cuentas=cuentaCol1(colCiudad,colPais,pais); }
-	else if (area!=''){ cuentas=cuentaCol1(colCiudad,colArea,area); }
-	else { cuentas=cuentaCol(colCiudad); }
+	if (pais!=''){ cuentas=cuentaCol1(CAMPO.city,CAMPO.country,pais); }
+	else if (area!=''){ cuentas=cuentaCol1(CAMPO.city,CAMPO.area,area); }
+	else { cuentas=cuentaCol(CAMPO.city); }
 	claves(cuentas).forEach(x => {
 		if (x=='.'||x=='-'){return}
 		createOpt(select,x,x,cuentas.get(x)||0);
@@ -1006,8 +959,8 @@ function filaEnVista(fila,pref){
 	// true si la fila pertenece a la vista activa (REG/EVT comparan el
 	// prefijo de fecha; '' acepta todas). En annual (EVT) omite los seminar.
 	if (pref==''){return true}
-	if (pref=='EVT' && ocultoEnAnual(fila[colTipo])){return false}
-	return String(fila[colFecha]).split('.')[0]==pref;
+	if (pref=='EVT' && ocultoEnAnual(fila[CAMPO.tiporol])){return false}
+	return fechaDe(fila).split('.')[0]==pref;
 }
 
 function cuentaCol(col1){
@@ -1039,16 +992,18 @@ function cuentaCol1(col,col1,v1){
 
 function cuentaCol2(col){
 	// Map valor->ocurrencias de una columna filtrando por el pais (selector1)
-	// y la ciudad (selector2) elegidos; trocea el campo por comas.
+	// y la ciudad (selector2) elegidos; trocea el campo por comas. col: posicion
+	// (CAMPO.x) o funcion que saca el valor de la fila (fechaDe).
+	const valorDe=(typeof col=='function') ? col : (fila => fila[col]);
 	let v1=document.getElementById('selector1').value;
 	let v2=document.getElementById('selector2').value;
-	let col1=colPais;
-	let col2=colCiudad;
+	let col1=CAMPO.country;
+	let col2=CAMPO.city;
 	const m=new Map();
 	for (let i=0;i<datos.length;i++){
 		if(v1=='all' || v1=='' || datos[i][col1]==v1){
 			if(v2=='all' || v2=='' || datos[i][col2]==v2){
-				let valor=datos[i][col].split(',');
+				let valor=String(valorDe(datos[i])).split(',');
 				for (let k=0;k<valor.length;k++){
 					if (valor[k]!=''){ m.set(valor[k],(m.get(valor[k])||0)+1); }
 				}
@@ -1078,9 +1033,9 @@ function cuentaFilasTipo(valorLista){
 	let v2=document.getElementById('selector2').value;
 	let total=0;
 	for (let i=0;i<datos.length;i++){
-		if(v1=='all' || v1=='' || datos[i][colPais]==v1){
-			if(v2=='all' || v2=='' || datos[i][colCiudad]==v2){
-				if (filtra(valorLista,datos[i][colTipo])!=-1){ total++; }
+		if(v1=='all' || v1=='' || datos[i][CAMPO.country]==v1){
+			if(v2=='all' || v2=='' || datos[i][CAMPO.city]==v2){
+				if (filtra(valorLista,datos[i][CAMPO.tiporol])!=-1){ total++; }
 			}
 		}
 	}
@@ -1093,11 +1048,11 @@ function cuentaTipoEVT(){
 	const v0=document.getElementById('selector0').value;
 	const m=new Map();
 	for (let i=0;i<datos.length;i++){
-		if (v0!='' && v0!='all' && datos[i][colArea]!=v0){continue}
-		let f=datos[i][colFecha];
+		if (v0!='' && v0!='all' && datos[i][CAMPO.area]!=v0){continue}
+		let f=fechaDe(datos[i]);
 		if (f=='-' || f==''){continue}
 		if (f.split('.')[0]!='EVT'){continue}
-		let t=datos[i][colTipo];
+		let t=datos[i][CAMPO.tiporol];
 		if (ocultoEnAnual(t)){continue}
 		if (t!=''){ m.set(t,(m.get(t)||0)+1); }
 	}
@@ -1116,27 +1071,29 @@ function cuentaFechas(){
 	const m=new Map();
 	for (let i=0;i<datos.length;i++){
 		let d=datos[i];
-		if (anual && ocultoEnAnual(d[colTipo])){continue}
-		if (s0!='' && s0!='all' && d[colArea]!=s0){continue}
-		if (s1!='' && s1!='all' && d[colPais]!=s1){continue}
-		if (s2!='' && s2!='all' && d[colCiudad]!=s2){continue}
-		if (s3!='' && s3!='all' && filtra(s3,d[colTipo])==-1){continue}
-		let mes=d[colFecha].split('.')[2];
+		if (anual && ocultoEnAnual(d[CAMPO.tiporol])){continue}
+		if (s0!='' && s0!='all' && d[CAMPO.area]!=s0){continue}
+		if (s1!='' && s1!='all' && d[CAMPO.country]!=s1){continue}
+		if (s2!='' && s2!='all' && d[CAMPO.city]!=s2){continue}
+		if (s3!='' && s3!='all' && filtra(s3,d[CAMPO.tiporol])==-1){continue}
+		let mes=fechaDe(d).split('.')[2];
 		if (meses.indexOf(mes)!=-1){ m.set(mes,(m.get(mes)||0)+1); }
 	}
 	return m;
 }
 
 function getObj(i){
-	// Convierte la fila i de datos (array de 8 campos) en un objeto con nombres.
+	// Convierte la fila i de datos (array de 9 campos) en un objeto con nombres.
 	let o={
-			pais:datos[i][colPais],
-			ciudad:datos[i][colCiudad],
-			tipo:datos[i][colTipo],
-			nombre:datos[i][colNombre],
-			autor:datos[i][colAutor],
-			fechas:datos[i][colFecha],
-			url:datos[i][colUrl],
+			pais:datos[i][CAMPO.country],
+			ciudad:datos[i][CAMPO.city],
+			tipo:datos[i][CAMPO.tiporol],
+			nombre:datos[i][CAMPO.name],
+			autor:variosSinFecha(datos[i]),   // varios sin la fecha
+			fechas:fechaDe(datos[i]),         // eventos: ultimo subcampo de varios
+			privado:datos[i][CAMPO.private],  // people: comentarios privados
+			url:datos[i][CAMPO.urlfb],
+			idfoto:datos[i][CAMPO.idfoto]||'',  // campo 9: id de la foto, '' sin foto
 			fila:datos[i],
 	}
 	return o;
@@ -1146,7 +1103,7 @@ function damelista(pais){
 	// Devuelve, como objetos, todas las filas cuyo pais coincide, en orden.
 	let res=[];
 	for (let i=0;i<datos.length;i++){
-		if (pais==datos[i][colPais]){
+		if (pais==datos[i][CAMPO.country]){
 			res.push(getObj(i));
 		}
 	}
@@ -1286,8 +1243,8 @@ function listaPaises(s0,s1){
 	// Paises a recorrer en el render segun el area (s0) y el pais (s1) elegidos.
 	// Con area, tambien '-': ahi van las list del area y las mundiales (enAreaSin).
 	if (s1!='' && s1!='all'){ return [s1]; }
-	if (s0==''){ return damecol(colPais); }
-	const l=damecol1(colPais,colArea,s0);
+	if (s0==''){ return damecol(CAMPO.country); }
+	const l=damecol1(CAMPO.country,CAMPO.area,s0);
 	return l.includes('-') ? l : l.concat('-');
 }
 
@@ -1303,7 +1260,7 @@ function omitirPais(area,s0,s1,s2,s3){
 function enAreaSin(item,area,s0){
 	// En el grupo sin pais ('-'), con un area elegida, solo las filas de esa
 	// area y las mundiales (area 'all'): el grupo junta filas de todas las areas.
-	return area!='-' || s0=='' || s0=='-' || [s0,'all'].includes(item.fila[colArea]);
+	return area!='-' || s0=='' || s0=='-' || [s0,'all'].includes(item.fila[CAMPO.area]);
 }
 
 function cabeceraPais(results,area){
@@ -1527,9 +1484,10 @@ function renderCountries(s0,s1,s2,s3,s4){
 
 			let span4='';
 			let scoment='';   // comentario libre del campo 6: va en otro parentesis detras
-			if (item.fechas!=''&&item.fechas!='-'){
-				// campo 7: fecha EVT/REG en eventos; comentario privado en people (separado por ',')
-				let tmp=item.fechas;
+			// fecha EVT/REG (eventos) o comentario privado (people, campo 7, separado por ',')
+			const campo7=item.fechas || item.privado || '';
+			if (campo7!=''&&campo7!='-'){
+				let tmp=campo7;
 				let prt=tmp.split('.');
 				if (prt[0]=='EVT' || prt[0]=='REG'){
 					span4='<div class="itemLinea">'+prt[2]+'.'+prt[4]+'</div>';
@@ -1548,7 +1506,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 				const textos=pub.map(sinUrls).filter(Boolean);
 				span3=textos.length ? '<div class="itemLinea">'+esc(textos.join(', '))+'&nbsp;</div>' : '';
 				span3+=urls.map(iconoUrl).join(' ');
-				const sfoto=iconoFoto(item.nombre,item.url);
+				const sfoto=iconoFoto(item.idfoto,false);
 				item.texto=span2+' : '+esc(item.nombre)+' : '+span1.replace('event ','')+
 				' : '+span3+' : '+(span4||scoment)+(sfoto ? ' '+sfoto : '');
 				span.innerHTML=item.texto;
@@ -1565,10 +1523,8 @@ function renderCountries(s0,s1,s2,s3,s4){
 				const varios=(item.autor!=''&&item.autor!='-') ? String(item.autor).split('#') : [];
 				const urls=urlsDe(varios,item.url);
 				const swww=urls.map(iconoUrl).join(' ');
-				// www para la foto: último subcampo de varios si es una url (la web que no es de FB)
-				const www=varios.length ? varios[varios.length-1].trim() : '';
-				// foto 👤: personas (perfil o, si no hay, portada) y eventos (portada, por la url o la www)
-				const sfoto=iconoFoto(item.nombre,item.url) || (/^https?:\/\//.test(www) ? iconoFoto(item.nombre,www) : '');
+				// foto 👤: por el id del campo 9 (eventos: la portada antes)
+				const sfoto=iconoFoto(item.idfoto,esEvento(item.tipo));
 				// (fecha o ▶️ 👤 ↗️ 🌐) y detras (comentario); sin parentesis vacios
 				const dentro=[span4,sfoto,slink,swww].filter(Boolean).join(' ');
 				// personas: roles entre parentesis detras del nombre; eventos: etiqueta delante
@@ -1639,7 +1595,7 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 		if (
 		      s0!='' &&
 		      s0!='all' &&
-		      (datos[i][colArea]!=s0)
+		      (datos[i][CAMPO.area]!=s0)
 		){continue}
 
 		let o=getObj(i);
