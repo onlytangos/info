@@ -262,18 +262,18 @@ a#link{
 
 <script>
 
-// indices de los 8 campos de cada fila de datos: CAMPO (data/aux.js)
+// indices de los 9 campos de cada fila de datos: CAMPO (data/aux.js)
 
 const meses=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 const opcionesVistas=['countries','annual','regular'];
 const opcionesFav=['fav','fav2'];   // no son vistas: recargan la pagina con ?vista=annual&fav&area=Asia / ?vista=annual&fav2&area=Asia
 
 // textos por defecto de cada selector
-const fsel0='- all area';
-const fsel1='- all country';
-const fsel2='- all city';
-const fsel3='- all type';
-const fsel4='- all dates';
+const fsel0='> all area';
+const fsel1='> all country';
+const fsel2='> all city';
+const fsel3='> all type';
+const fsel4='> all dates';
 const textoFav={fav:'mis favoritos',fav2:'mi agenda'};   // texto de opcionesFav en el selector de vista
 const fsel5=opcionesVistas[0];
 
@@ -440,7 +440,7 @@ function descarga(nombre,texto){
 function exportar(){
 	// Descarga export.json con las filas que se ven en el listado (personas,
 	// eventos, venues y milongas), en el mismo formato que los demas res*.json
-	// del import: array JSON, una fila de 8 campos por linea.
+	// del import: array JSON, una fila de 9 campos por linea.
 	// Para mirarlo o usarlo a mano: no lo lee el import ni ningún script.
 	const filas=datos.filter(f => filasVisibles.has(f));
 	if (!filas.length){ return }
@@ -597,7 +597,7 @@ function esEvento(tipo){
 	// true si la fila es evento, venue, milonga o list (primera palabra del tipo);
 	// si no, es una persona. Unica regla para distinguirlos en todo el codigo.
 	// list: fuente de informacion (web con milongas, eventos...); las mundiales
-	// tienen area 'all' y pais y ciudad '-'.
+	// tienen area 'World', pais 'world' y ciudad '*world'.
 	return ['event','venue','milonga','list'].includes(String(tipo).split(' ')[0]);
 }
 
@@ -698,7 +698,7 @@ function addTiposEvento(select,cuentas,conPrefijo){
 function crearSelType(){
 	// Rellena el selector de tipo (selector3) segun app y vista:
 	//  - mundo/annual: los tipos de evento EVT presentes en los datos.
-	//  - mundo/otras : eventos (codigo de 3 letras) y luego roles de people.
+	//  - mundo/otras : list y dos grupos: events (codigo de 3 letras) y people (roles).
 	//  - people      : los roles tal cual.
 	let vista='';
 	if (document.getElementById('selector5')!=undefined){
@@ -719,19 +719,24 @@ function crearSelType(){
 			// salia 'party(0)' y faltaban seminar/championship.
 			addTiposEvento(select,cuentaTipoEVT(),false);
 		}else{
+			// list primero; despues dos grupos (optgroup), events y people, cada
+			// uno con su opcion de todos (events / people) al principio
 			let cuentas=cuentaCol2(CAMPO.tiporol);
 			createOpt(select,'list','list',sumaCuenta(cuentas,'list'));   // fuentes de informacion
-			createOpt(select,'*','events',cuentaFilasTipo('*'));     // todos los eventos: event, venue y milonga
-			createOpt(select,'!','people',cuentaFilasTipo('!'));   // todas las personas, con o sin rol
-			createOpt(select,'event','event*',sumaCuenta(cuentas,'event'));
-			addTiposEvento(select,cuentas,true);
-			createOpt(select,'+'+rolesPeople.join(','),'peopleRol',cuentaFilasTipo('+'+rolesPeople.join(',')));
-			createOpt(select,'+'+rolesPublicos.join(','),'peoplePublic',cuentaFilasTipo('+'+rolesPublicos.join(',')));
-			createOpt(select,'!'+rolesPublicos.join(','),'peoplePrivate',cuentaFilasTipo('!'+rolesPublicos.join(',')));
+			const grupo=label => { const g=document.createElement('optgroup'); g.label=label; select.appendChild(g); return g; };
+			const gEv=grupo('events');
+			createOpt(gEv,'*','events',cuentaFilasTipo('*'));     // todos los eventos: event, venue y milonga
+			createOpt(gEv,'event','event*',sumaCuenta(cuentas,'event'));
+			addTiposEvento(gEv,cuentas,true);
+			const gPe=grupo('people');
+			createOpt(gPe,'!','people',cuentaFilasTipo('!'));   // todas las personas, con o sin rol
+			createOpt(gPe,'+'+rolesPeople.join(','),'peopleRol',cuentaFilasTipo('+'+rolesPeople.join(',')));
+			createOpt(gPe,'+'+rolesPublicos.join(','),'peoplePublic',cuentaFilasTipo('+'+rolesPublicos.join(',')));
+			createOpt(gPe,'!'+rolesPublicos.join(','),'peoplePrivate',cuentaFilasTipo('!'+rolesPublicos.join(',')));
 			claves(cuentas).forEach(x => {
 				if (esEvento(x)){return}
-				createOpt(select,x.split(' ')[0],x,cuentas.get(x)||0);
-				select.lastChild.textContent+=sufijoRol(x);
+				createOpt(gPe,x.split(' ')[0],x,cuentas.get(x)||0);
+				gPe.lastChild.textContent+=sufijoRol(x);
 			})
 		}
 	}else if (app=='people'){
@@ -769,7 +774,6 @@ function poblarAreas(select){
 	select.appendChild(optionDefault);
 	let cuentas=cuentaCol(CAMPO.area);
 	claves(cuentas).forEach(x => {
-		if (x=='all'){return}   // area de las list mundiales: 'all' en los filtros es 'sin filtro'
 		const opt=document.createElement('option');
 		opt.value=x;
 		opt.textContent=opTxt(x,cuentas.get(x)||0);
@@ -1241,7 +1245,7 @@ function borraTxt(cadena, palabrasAEliminar){
 
 function listaPaises(s0,s1){
 	// Paises a recorrer en el render segun el area (s0) y el pais (s1) elegidos.
-	// Con area, tambien '-': ahi van las list del area y las mundiales (enAreaSin).
+	// Con area, tambien '-': las filas del area sin pais (enArea), como el PTC de Asia.
 	if (s1!='' && s1!='all'){ return [s1]; }
 	if (s0==''){ return damecol(CAMPO.country); }
 	const l=damecol1(CAMPO.country,CAMPO.area,s0);
@@ -1249,18 +1253,17 @@ function listaPaises(s0,s1){
 }
 
 function omitirPais(area,s0,s1,s2,s3){
-	// '-' y '.' son ubicaciones vacias (people.private): se muestran solo si no
-	// hay ningun filtro activo; con filtro se omiten. Excepciones: si el propio
-	// filtro de area pedido es '-', o si el tipo es list (las de un area o
-	// mundiales no tienen pais), no se debe ocultar ese grupo.
-	if (s0=='-' || (s3=='list' && area=='-' && s1=='' && s2=='')){return false}
-	return (area=='-'||area=='.') && (s0!=''||s1!=''||s2!='');
+	// '-' y '.' son ubicaciones vacias (sin pais): con pais o ciudad elegidos se
+	// omiten; sin filtro salen todas y con solo un area, las de esa area (enArea).
+	return (area=='-'||area=='.') && (s1!=''||s2!='');
 }
 
-function enAreaSin(item,area,s0){
-	// En el grupo sin pais ('-'), con un area elegida, solo las filas de esa
-	// area y las mundiales (area 'all'): el grupo junta filas de todas las areas.
-	return area!='-' || s0=='' || s0=='-' || [s0,'all'].includes(item.fila[CAMPO.area]);
+function enArea(item,s0){
+	// Con un area elegida, solo las filas de esa area: damelista junta por pais
+	// (un pais con filas en otra area, o el grupo sin pais, traeria las de otras
+	// areas). Con el area '-', solo las que no tienen area. Asi el listado cuenta
+	// lo mismo que el selector de area.
+	return s0=='' || s0=='all' || item.fila[CAMPO.area]==s0;
 }
 
 function cabeceraPais(results,area){
@@ -1305,6 +1308,7 @@ function renderRegular(s0,s1,s2,s3,s4){
 		for (const item of entradas) {
 
 			if (!pasaFiltros(item,s2,s3,s4)){continue}
+			if (!enArea(item,s0)){continue}
 
 			let ciudad=item.ciudad;
 			if (!porCiudad.has(ciudad)){
@@ -1317,10 +1321,13 @@ function renderRegular(s0,s1,s2,s3,s4){
 				mapa.get(item.nombre)[7]=item.url;
 			}
 			if (item.fechas.split('.')[0]=='REG'){
+				// leeReg (aux.js): una milonga de varios días va en cada uno; la
+				// mensual, con sus semanas detrás de la hora (2nd,4th)
 				let venue=item.autor.split('#')[0];
-				let hora=item.fechas.split('.')[4]||'';
-				let diaTxt=item.fechas.split('.')[1];
-				let clave=venue+'#'+diaTxt+'#'+hora+'#'+item.nombre;
+				const reg=leeReg(item.fechas);
+				let hora=reg ? reg.hora : '';
+				if (reg && reg.frec=='M'){hora=(hora ? hora+' ' : '')+semanasReg(reg.semanas)}
+				let clave=venue+'#'+item.fechas+'#'+item.nombre;
 				if (vistos.has(clave)){continue}
 				vistos.add(clave);
 				filasVisibles.add(item.fila);
@@ -1330,12 +1337,12 @@ function renderRegular(s0,s1,s2,s3,s4){
 					mapa.set(venue,['','','','','','','','','']);
 				}
 				let valor=mapa.get(venue);
-				if (diaTxt=='?'){
-					// dia desconocido (REG.?.?.W.hora): 'consultar' en las
+				if (!reg || !reg.dias.length){
+					// dia desconocido (REG.W.?.hora): 'consultar' en las
 					// celdas de la semana, con la hora si la hay
 					valor[8]=(valor[8]||'')+item.nombre+'|'+item.url+'|'+hora+'#';
 				}else{
-					valor[parseInt(diaTxt)]+=hora+'|'+item.nombre+'|'+item.url+'#';
+					for (const d of reg.dias){ valor[d]+=hora+'|'+item.nombre+'|'+item.url+'#'; }
 				}
 				mapa.set(venue,valor);
 			} else if (item.tipo=='milonga'){
@@ -1440,7 +1447,7 @@ function renderCountries(s0,s1,s2,s3,s4){
 
 		for (const item of entradas) {
 			if (!pasaFiltros(item,s2,s3,s4)){continue}
-			if (!enAreaSin(item,area,s0)){continue}
+			if (!enArea(item,s0)){continue}
 			if (!pasaFav2(item)){continue}
 			filasVisibles.add(item.fila);
 
@@ -1489,7 +1496,9 @@ function renderCountries(s0,s1,s2,s3,s4){
 			if (campo7!=''&&campo7!='-'){
 				let tmp=campo7;
 				let prt=tmp.split('.');
-				if (prt[0]=='EVT' || prt[0]=='REG'){
+				if (prt[0]=='REG'){
+					span4='<div class="itemLinea">'+esc(textoReg(tmp))+'</div>';
+				}else if (prt[0]=='EVT'){
 					span4='<div class="itemLinea">'+prt[2]+'.'+prt[4]+'</div>';
 				}else{
 					// las urls van con icono (▶️ YouTube, 🌐 otra web), no en el texto del comentario

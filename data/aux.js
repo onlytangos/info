@@ -12,14 +12,23 @@ aux.js : datos auxiliares escritos a mano (en data/). Antes roles.js y favoritos
 // ════════════════════════════ CAMPOS ════════════════════════════
 
 /*
-CAMPO: posición de cada campo en las filas de *.out.js (9 campos) y res*.json (8).
+CAMPO: posición de cada campo en las filas de 9 campos de *.out.js y res*.json.
 Los programas usan fila[CAMPO.name] en vez de fila[4] (en Python igual:
 comun.CAMPO.name). People y eventos comparten posiciones:
   tiporol 3  people: roles (art,org...)              eventos: milonga, event...
   varios 5   people: datos públicos separados por #  eventos: subcampos con # (abajo)
   private 6  people: comentarios privados            eventos: "-"
-  idfoto 8   solo en *.out.js (lo añade paso1): id de la foto (8 letras, p.ej.
-             abcdefgh); vacío = sin foto
+  idfoto 8   id de la foto (6 letras, p.ej. abcdef; review/fotoid.py); vacío =
+             sin foto. En todas las fuentes: el que trae se queda; vacío, lo
+             pone foto_ids (comun.sh) al generar, y en *.out.js, paso1
+fecha regular (REG, lo que se repite: milongas...): la misma gramática en
+todas las fuentes, una fila por milonga con sus días (import/campos.py):
+  REG.D.<hora>                  todos los días
+  REG.W.<días>.<hora>           cada semana: días 0 domingo ... 6 sábado,
+                                separados por - (1-3: lunes y miércoles); ? sin día fijo
+  REG.M.<día>.<semanas>.<hora>  cada mes, ese día de esas semanas: 1..5
+                                separadas por - (2-4: segunda y cuarta); L la última
+  <hora>: hhmm-hhmm, hhmm o vacía
 varios de eventos: la fecha (EVT.../REG...) es siempre el último subcampo y
 www (opcional) va justo antes; venue y list no llevan fecha:
   milonga  local#org[#www]#REG...
@@ -45,6 +54,37 @@ function fechaDe(fila){
 function variosSinFecha(fila){
   const v=String(fila[CAMPO.varios]||'');
   return fechaDe(fila) ? v.slice(0,v.lastIndexOf('#')) : v;
+}
+
+// fecha regular REG (gramática arriba; igual que lee_reg de import/campos.py):
+// {frec: D|W|M, dias: [0-6] ([] sin día fijo), semanas: ['1'..'5','L'], hora};
+// null si no la sigue
+function leeReg(f){
+  const p=String(f||'').split('.');
+  const horaOk=h => /^(\d{4}(-\d{4})?)?$/.test(h);
+  if (p[0]!='REG'){return null}
+  if (p[1]=='D' && p.length==3 && horaOk(p[2])){return {frec:'D', dias:[0,1,2,3,4,5,6], semanas:[], hora:p[2]}}
+  if (p[1]=='W' && p.length==4 && horaOk(p[3]) && /^(\?|[0-6](-[0-6])*)$/.test(p[2])){
+    return {frec:'W', dias:p[2]=='?' ? [] : p[2].split('-').map(Number), semanas:[], hora:p[3]};
+  }
+  if (p[1]=='M' && p.length==5 && horaOk(p[4]) && /^[0-6]$/.test(p[2]) && /^([1-5]|L)(-([1-5]|L))*$/.test(p[3])){
+    return {frec:'M', dias:[Number(p[2])], semanas:p[3].split('-'), hora:p[4]};
+  }
+  return null;
+}
+// semanas del mes de una REG mensual, en texto: ['2','4'] -> '2nd,4th'; L -> 'last'
+function semanasReg(ss){
+  const ord={'1':'1st','2':'2nd','3':'3rd','4':'4th','5':'5th','L':'last'};
+  return ss.map(s => ord[s]||s).join(',');
+}
+// texto corto de una fecha REG: 'daily 2000-2300', 'mon,wed 2000', 'fri 2nd,4th 2100', '? 2100'
+function textoReg(f){
+  const r=leeReg(f);
+  if (!r){return String(f||'')}
+  const dias=['sun','mon','tue','wed','thu','fri','sat'];
+  const cuando=r.frec=='D' ? 'daily' : (r.dias.length ? r.dias.map(d => dias[d]).join(',') : '?')
+    +(r.frec=='M' ? ' '+semanasReg(r.semanas) : '');
+  return cuando+(r.hora ? ' '+r.hora : '');
 }
 
 // ════════════════════════════ ROLES ════════════════════════════
