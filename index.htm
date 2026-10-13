@@ -317,67 +317,64 @@ function peopleDisponible(){
 	return (typeof privatePeople!='undefined') ? privatePeople : publicPeople;
 }
 
-function inicio(){
-	// Punto de entrada (window.onload): elige el dataset segun app, define los
-	// colores por tipo, monta el menu lateral con los selectores y pinta el
-	// primer listado.
-	readParam();
-	app=parametros.app;
+const COLOR_TIPO_MUNDO={'milonga':'#adf5d7','venue':'#fae3ad','event':'#e5f9ff','event party':'#d7f6fa',
+	'event festival':'#c3e8ff','event encuentro':'#7db1ff','event marathon':'#acccfc',
+	'event championship':'#ff6961','venue academy':'#f3d4ff','list':'#e0d4f7'};   // color de cada tipo de evento (app mundo)
+
+function eligeDatos(){
+	// datos, titulos y colores por tipo segun la app (mundo: eventos y
+	// personas; people: solo personas). Los colores de los roles, de aux.js
 	if (app=='mundo'){
 		datos=publicEvent.concat(peopleDisponible());   // privado si existe (local), si no el público (web)
 		titulo1='OnlyTangoInfo';
 		titulo2='<a href="https://www.facebook.com/profile.php?id=100093497583670" target="_blank">by KoKoTango</a>'+
 			// versión: privada (local, con privatePeople.out.js) o pública (la web, sin él), como caras.htm
 			'<br><small>'+(typeof privatePeople!='undefined' ? 'private version' : 'public version')+'</small>';
-		colorTipo.set('milonga','#adf5d7');
-		colorTipo.set('venue','#fae3ad');
-		colorTipo.set('event','#e5f9ff');
-		colorTipo.set('event party','#d7f6fa');
-		colorTipo.set('event festival','#c3e8ff');
-		colorTipo.set('event encuentro','#7db1ff');
-		colorTipo.set('event marathon','#acccfc');
-		colorTipo.set('event championship','#ff6961');
-		colorTipo.set('list','#e0d4f7');
-		// roles de people (aux.js)
+		for (const t in COLOR_TIPO_MUNDO){ colorTipo.set(t,COLOR_TIPO_MUNDO[t]); }
 		for (const r in ROLES){ colorTipo.set(r,ROLES[r].color); }
 	}
 	if(app=='people'){
 		datos=peopleDisponible();   // privado contiene a todos; publicPeople es un subconjunto
 		titulo1=`People &#128518; `;
 		titulo2='';
-		// roles de people (aux.js)
 		for (const r in ROLES){ colorTipo.set(r,ROLES[r].colorPeople); }
 	}
 	datosAll=datos;
-	cargaFotos();
+}
 
-	const body=document.body;
-	const fijo=document.createElement('div');
-	fijo.id='fijo';
-	body.appendChild(fijo);
-	const tt1=document.createElement('div');
-	tt1.id='titulo1';
-	tt1.innerHTML=titulo1;
-	const tt2=document.createElement('div');
-	tt2.id='titulo2';
-	tt2.innerHTML=titulo2+'<br/><br/>';
-	fijo.appendChild(tt1);
-	fijo.appendChild(tt2);
-	const sumario=document.createElement('div');
-	sumario.id='sumario';
-	fijo.appendChild(sumario);
+function div(id,html){
+	const d=document.createElement('div');
+	d.id=id;
+	if (html!=undefined){ d.innerHTML=html; }
+	return d;
+}
 
+function montaMenu(){
+	// la cabecera fija: titulos, sumario, buscador, selectores y exportar
+	const fijo=div('fijo');
+	document.body.appendChild(fijo);
+	fijo.appendChild(div('titulo1',titulo1));
+	fijo.appendChild(div('titulo2',titulo2+'<br/><br/>'));
+	fijo.appendChild(div('sumario'));
 	if (app=='mundo' || app=='people'){
 		crearBuscador(fijo);
 		setParametrosSelectores(fijo);
 		setSel();
 		crearBotonExport(fijo);
 	}
+}
 
+function inicio(){
+	// Punto de entrada (window.onload): elige el dataset segun app, monta el
+	// menu lateral con los selectores y pinta el primer listado.
+	readParam();
+	app=parametros.app;
+	eligeDatos();
+	montaMenu();
 	const results=document.createElement('ul');
 	results.id='resultados';
 	results.style.marginTop='10px';
-	body.appendChild(results);
+	document.body.appendChild(results);
 	cargaFavoritos();
 	renderGo();
 	borraParametros();
@@ -392,17 +389,17 @@ function setParametrosSelectores(fijo){
 	}
 	fijo.appendChild(crearSelAreas());
 	cambiarValorSelector('selector0',parametros.area);
-	fijo.appendChild(crearSel1());
+	fijo.appendChild(crearSelect('selector1',change1));
 	crearSelCountry();
 	cambiarValorSelector('selector1',parametros.pais);
-	fijo.appendChild(crearSel2());
+	fijo.appendChild(crearSelect('selector2',change2));
 	crearSelCity();
 	cambiarValorSelector('selector2',parametros.ciudad);
-	fijo.appendChild(crearSel3());
+	fijo.appendChild(crearSelect('selector3',change3));
 	crearSelType();
 	cambiarValorSelector('selector3',parametros.tipo);
 	if (app!='people'){
-		fijo.appendChild(crearSel4());
+		fijo.appendChild(crearSelect('selector4',change4));
 		crearSelDates();
 		cambiarValorSelector('selector4',parametros.fecha);
 	}
@@ -426,17 +423,6 @@ function crearBotonExport(fijo){
 	}
 }
 
-function descarga(nombre,texto){
-	// Descarga 'texto' como un fichero llamado 'nombre'.
-	const a=document.createElement('a');
-	a.href=URL.createObjectURL(new Blob([texto],{type:'application/json'}));
-	a.download=nombre;
-	document.body.appendChild(a);
-	a.click();
-	a.remove();
-	setTimeout(() => URL.revokeObjectURL(a.href),1000);
-}
-
 function exportar(){
 	// Descarga export.json con las filas que se ven en el listado (personas,
 	// eventos, venues y milongas), en el mismo formato que los demas res*.json
@@ -445,7 +431,7 @@ function exportar(){
 	const filas=datos.filter(f => filasVisibles.has(f));
 	if (!filas.length){ return }
 	const cuerpo=filas.map(f => '  ['+f.map(v => JSON.stringify(v)).join(', ')+']').join(',\n');
-	descarga('export.json','[\n'+cuerpo+'\n]\n');
+	bajaFichero('export.json','[\n'+cuerpo+'\n]\n','application/json');
 }
 
 function cambiarValorSelector(idSelector, nuevoValor) {
@@ -461,61 +447,31 @@ function cambiarValorSelector(idSelector, nuevoValor) {
 	}
 }
 
+function crearSelect(id,alCambiar){
+	// Crea un selector vacio (lo llena su crearSel*: crearSelCountry,
+	// crearSelCity, crearSelType, crearSelDates) que llama a alCambiar
+	const select=document.createElement('select');
+	select.id=id;
+	select.addEventListener('change',alCambiar);
+	return select;
+}
+
 function crearSel5(){
 	// Crea el selector de vista (selector5): countries / annual / regular.
-	let select=document.createElement('select');
-	select.id='selector5';
-	select.addEventListener('change',change5);
-	const lista=opcionesVistas.concat(opcionesFav);
-	lista.forEach(x => {
-		const opt=document.createElement('option');
-		opt.value=x;
-		opt.textContent=textoFav[x] || 'by '+x;
-		select.appendChild(opt);
-	});
-	return select;
-}
-
-function crearSel4(){
-	// Crea el selector de fechas/meses (selector4) vacio; lo llena crearSelDates.
-	let select=document.createElement('select');
-	select.id='selector4';
-	select.addEventListener('change',change4);
-	return select;
-}
-
-function crearSel3(){
-	// Crea el selector de tipo (selector3) vacio; lo llena crearSelType.
-	let select=document.createElement('select');
-	select.id='selector3';
-	select.addEventListener('change',change3);
-	return select;
-}
-
-function crearSel2(){
-	// Crea el selector de ciudad (selector2) vacio; lo llena crearSelCity.
-	let select=document.createElement('select');
-	select.id='selector2';
-	select.addEventListener('change',change2);
-	return select;
-}
-
-function crearSel1(){
-	// Crea el selector de pais (selector1) vacio; lo llena crearSelCountry.
-	let select=document.createElement('select');
-	select.id='selector1';
-	select.addEventListener('change',change1);
+	// El valor sigue siendo countries aunque diga 'by locations' (enlaces ?vista=)
+	const select=crearSelect('selector5',change5);
+	opcionesVistas.concat(opcionesFav).forEach(x =>
+		opcionTexto(select,x,textoFav[x] || 'by '+(x=='countries' ? 'locations' : x)));
 	return select;
 }
 
 // ── Favoritos (var favoritos de aux.js) ──
-// Misma regla que clave_evento() en paso1-merge.sh: palabras del nombre sin
-// relleno, genero (tango, marathon...) ni numeros/años, ordenadas, + ciudad.
-const FAV_ICONO={home:'&#128726;',go:'&#128522;',think:'&#11088;',moreinfo:'&#10067;'};
-const FAV_STOP=new Set(['tango','practica','pratik','serata','festival','marathon','maratona','club','encuentro']);
-const FAV_RELLENO=new Set(('de del la el los las lo un una unos unas al y e o u the a an and of in on at to for with by or '+
-	'le les du des une et aux au sur dans avec di da il i gli con per della dei der die das und mit im fur von zur zum '+
-	'en com do dos na no edition edicion ed vol part').split(' '));
+// Un favorito es de un evento de su misma ciudad si todas las palabras de su
+// nombre estan en el nombre del evento (normalizados: sin mayusculas, tildes
+// ni parentesis). Vale un nombre incompleto ('Busan Tango Marathon' = 'Busan
+// Tango Marathon 2026'). Misma regla que fav_de() de paso1, que avisa de los
+// que no casan o casan con varios.
+const FAV_ICONO={home:'&#128726;',go:'&#11088;',think:'&#10067;'};   // 🛖 ⭐ ❓ (estados de aux.js)
 
 function normalizarFav(s){
 	// Copia de normalizar() de comun.py
@@ -524,22 +480,27 @@ function normalizarFav(s){
 	return s.replace(/\s+/g,' ').trim();
 }
 
-function claveFav(nombre,ciudad){
-	const p=[...new Set(normalizarFav(nombre).split(' ').filter(w =>
-		w && !FAV_RELLENO.has(w) && !FAV_STOP.has(w) && !/^\d/.test(w)))].sort();
-	return p.join(' ')+'|'+normalizarFav(ciudad);
+function palabrasFav(nombre){
+	return new Set(normalizarFav(nombre).split(' ').filter(Boolean));
 }
 
-const favMapa=new Map();
+const favLista=[];   // {palabras (del nombre), ciudad, estado} de cada favorito
+
+function estadoFav(nombre,ciudad){
+	// estado del favorito del evento (nombre, ciudad), '' si no lo es
+	const c=normalizarFav(ciudad), p=palabrasFav(nombre);
+	const f=favLista.find(f => f.ciudad==c && f.palabras.size && [...f.palabras].every(w => p.has(w)));
+	return f ? f.estado : '';
+}
 
 const FAV2=['home','go'];   // estados que se ven con ?fav2
 
 function pasaFav2(item){
 	// Con ?fav2 solo pasan los eventos favoritos en estado FAV2 (home/go).
 	// Sin ?fav2, o sin favoritos, pasa todo.
-	if (parametros.fav2==undefined || !favMapa.size){return true}
+	if (parametros.fav2==undefined || !favLista.length){return true}
 	return String(item.tipo).startsWith('event') &&
-		FAV2.includes(favMapa.get(claveFav(item.nombre,item.ciudad)));
+		FAV2.includes(estadoFav(item.nombre,item.ciudad));
 }
 
 function cargaFavoritos(){
@@ -550,27 +511,20 @@ function cargaFavoritos(){
 	if (typeof favoritos=='undefined'){return}
 	// favoritos: filas [nombre, ciudad, estado]
 	for (const [n,c,estado] of favoritos){
-		favMapa.set(claveFav(n,c||''),estado);
+		favLista.push({palabras:palabrasFav(n), ciudad:normalizarFav(c||''), estado});
 	}
 }
 
 // ── Fotos (review/fotoid.js, opcional; lo genera review/fotoid.py) ──
-// El campo 9 de cada fila (CAMPO.idfoto) es el id de su foto (6 letras), vacío
+// El campo 9 de cada fila (CAMPO.idfoto) es el id de su foto (6 letras), "-"
 // si no tiene. Con ese id puede haber foto en review/foto0/ (a mano), foto1/
 // (perfil), foto2/ (portada) y foto9/ (dudosas): se toma la primera en orden
 // 0,1,2,9 (eventos 0,2,1,9: la portada antes). fotosId[carpeta] = ['<id>.jpg',...]
-const fotoSets={};
-function cargaFotos(){
-	for (const c of ['0','1','2','9']) fotoSets[c]=new Set(typeof fotosId!='undefined' && fotosId[c] ? fotosId[c] : []);
-}
 function iconoFoto(idfoto,evento){
 	// Enlace 👤 a la foto de la persona o evento; si no tiene, ''.
-	if (!idfoto) return '';
-	for (const c of (evento ? ['0','2','1','9'] : ['0','1','2','9']))
-		for (const e of ['jpg','webp','png'])
-			if (fotoSets[c] && fotoSets[c].has(idfoto+'.'+e))
-				return '<a href="review/foto'+c+'/'+idfoto+'.'+e+'" onclick="return toggleFoto(this)">'+icon('user')+'</a>';
-	return '';
+	// (fotoDeId de aux.js)
+	const f=fotoDeId(idfoto,evento);
+	return f ? '<a href="review/foto'+f.carpeta+'/'+f.fichero+'" onclick="return toggleFoto(this)">'+icon('user')+'</a>' : '';
 }
 function toggleFoto(a){
 	// Click en 👤: muestra la foto justo al lado del 👤; otro click en 👤 o en la foto la quita.
@@ -589,17 +543,10 @@ function toggleFoto(a){
 
 function iconoFav(nombre,ciudad){
 	// Emoji del estado del favorito (con espacio detras) o '' si no lo es.
-	const e=favMapa.get(claveFav(nombre,ciudad));
-	return e ? '<span class="fav" title="'+e+'">'+(FAV_ICONO[e]||'&#11088;')+'</span>&nbsp;' : '';
+	const e=estadoFav(nombre,ciudad);
+	return e ? '<span class="fav" title="'+e+'">'+(FAV_ICONO[e]||'&#10067;')+'</span>&nbsp;' : '';
 }
 
-function esEvento(tipo){
-	// true si la fila es evento, venue, milonga o list (primera palabra del tipo);
-	// si no, es una persona. Unica regla para distinguirlos en todo el codigo.
-	// list: fuente de informacion (web con milongas, eventos...); las mundiales
-	// tienen area 'World', pais 'world' y ciudad '*world'.
-	return ['event','venue','milonga','list'].includes(String(tipo).split(' ')[0]);
-}
 
 function esc(s){
 	// Escapa &, < y > de un texto antes de meterlo en innerHTML (evita romper
@@ -629,7 +576,6 @@ function icon(nombre,size){
 // urls en un texto: con http(s)://, con www. o un dominio suelto (tangoenvinilo.com, cafe.naver.com/x)
 const RE_URL=/(?:https?:\/\/|www\.)[^\s|#]+|(?<![@\w.\/-])[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|kr|es|fr|it|de|tw|jp|cn|be|io|me|tv|info|ar|uy|ly)(?:\/[^\s|#]*)?(?![\w@.-])/gi;
 function conHttp(u){ return /^https?:\/\//i.test(u) ? u : 'https://'+u; }
-function claveUrl(u){ return conHttp(u).replace(/^https?:\/\/(www\.)?/i,'').replace(/\/+$/,'').toLowerCase(); }
 function urlsDe(subcampos,excluir){
 	// urls de una lista de textos, sin repetir y sin la url excluir (la del ↗️)
 	const vistas=new Set([excluir ? claveUrl(excluir) : '']), res=[];
@@ -643,10 +589,25 @@ function sinUrls(t){
 	// el texto sin urls ni separadores sueltos en los extremos
 	return String(t).replace(RE_URL,' ').replace(/\s+/g,' ').replace(/^[\s,;|\/:-]+|[\s,;|\/:-]+$/g,'');
 }
-function iconoUrl(u){
-	// enlace con icono: ▶️ si la url es de YouTube, 🌐 si es de otra web
+function iconoUrl(u,vid){
+	// enlace con icono: ▶️ si es un vídeo (subcampo vid, o YouTube), 🌐 si es otra web
 	return '<a href="'+u.replace(/"/g,'%22')+'" target="_blank">'+
-		icon(/^https?:\/\/([a-z0-9-]+\.)*(youtube\.com|youtu\.be)\//i.test(u) ? 'play' : 'web')+'</a>';
+		icon(vid || /^https?:\/\/([a-z0-9-]+\.)*(youtube\.com|youtu\.be)\//i.test(u) ? 'play' : 'web')+'</a>';
+}
+function contactosVarios(v){
+	// ins (enlace a Instagram), ema (mailto), tel, wec y kak (texto; kak con url, enlace)
+	const a=(href,t) => '<a href="'+href.replace(/"/g,'%22')+'" target="_blank">'+esc(t)+'</a>';
+	return [...(v.ins||[]).map(u => a('https://www.instagram.com/'+encodeURIComponent(u)+'/','@'+u)),
+		...(v.ema||[]).map(e => a('mailto:'+e,e)),
+		...(v.tel||[]).map(t => esc('☎ '+t)),
+		...(v.wec||[]).map(w => esc('WeChat '+w)),
+		...(v.kak||[]).map(k => /^https?:\/\//.test(k) ? a(k,'Kakao') : esc('Kakao '+k))].join(' ');
+}
+function iconosVarios(v,excluir){
+	// iconos de los vid (▶️), los www y las urls dentro de los txt (🌐), sin repetir ni excluir (la del ↗️)
+	const vids=urlsDe(v.vid||[],excluir);
+	const otras=urlsDe([...(v.www||[]),...(v.txt||[])],excluir).filter(u => !vids.includes(u));
+	return [...vids.map(u => iconoUrl(u,true)),...otras.map(u => iconoUrl(u))].join(' ');
 }
 function spanRoles(tipo,sep){
 	// Lista de roles ('org,art,p26') con una etiqueta de color por rol
@@ -666,21 +627,19 @@ function opTxt(t,n){
 }
 
 function createOpt(s,v,t,n){
-	// Crea una <option> (value=v, etiqueta=opTxt(t,n)) y la añade al select s.
-	const opt=document.createElement('option');
-	opt.value=v;
-	opt.textContent=opTxt(t,n);
-	s.appendChild(opt);
+	// <option> value=v con la etiqueta opTxt(t,n) (con el contador) en el select s
+	opcionTexto(s,v,opTxt(t,n));
 }
 
 function get3(a){
-	// Codigo de 3 letras para un tipo de evento (ej. 'event festival' -> 'FES').
-	// 'event' devuelve 'EVT'; rellena con '-' si tiene menos de 3 letras.
+	// Codigo de 3 letras de un tipo: su ultima palabra ('event festival' -> 'FES',
+	// 'venue academy' -> 'ACA', 'venue' -> 'VEN'); 'event' devuelve 'EVT'.
+	// Rellena con '-' si tiene menos de 3 letras.
 	if (a=='event'){
 		return 'EVT';
 	}
-	let b=a.replace('event','').trim();
-	return b.slice(0,3).toUpperCase().padEnd(3, '-');
+	const ps=String(a).trim().split(' ');
+	return ps[ps.length-1].slice(0,3).toUpperCase().padEnd(3, '-');
 }
 
 function addTiposEvento(select,cuentas,conPrefijo){
@@ -695,98 +654,93 @@ function addTiposEvento(select,cuentas,conPrefijo){
 	});
 }
 
+function opcionesPeople(dest){
+	// personas con algun rol publico / sin ninguno
+	createOpt(dest,'+'+rolesPublicos.join(','),'peoplePublic',cuentaFilasTipo('+'+rolesPublicos.join(',')));
+	createOpt(dest,'!'+rolesPublicos.join(','),'peoplePrivate',cuentaFilasTipo('!'+rolesPublicos.join(',')));
+}
+
+function vaciaSelect(select,textoDefecto){
+	// vacia el selector y le pone su opcion por defecto (valor '': todos)
+	select.innerHTML='';
+	opcionTexto(select,'',textoDefecto);
+}
+
+function opcionesCuenta(select,valores,cuentas,sufijo){
+	// una <option> por valor, con su contador (opTxt) y, si se da, sufijo(valor) detras
+	valores.forEach(x => opcionTexto(select,x,opTxt(x,cuentas.get(x)||0)+(sufijo ? sufijo(x) : '')));
+}
+
+function opcionTexto(dest,valor,texto){
+	// <option> value=valor con la etiqueta texto, tal cual, en dest
+	const opt=document.createElement('option');
+	opt.value=valor;
+	opt.textContent=texto;
+	dest.appendChild(opt);
+}
+
+function tiposMundo(select){
+	// list primero; despues dos grupos (optgroup), events y people, cada
+	// uno con su opcion de todos (events / people) al principio
+	const cuentas=cuentaCol2(CAMPO.tiporol);
+	createOpt(select,'list','list',sumaCuenta(cuentas,'list'));   // fuentes de informacion
+	const grupo=label => { const g=document.createElement('optgroup'); g.label=label; select.appendChild(g); return g; };
+	const gEv=grupo('events');
+	createOpt(gEv,'*','events',cuentaFilasTipo('*'));     // todos los eventos: event, venue y milonga
+	createOpt(gEv,'event','event*',sumaCuenta(cuentas,'event'));
+	addTiposEvento(gEv,cuentas,true);
+	const gPe=grupo('people');
+	createOpt(gPe,'!','people',cuentaFilasTipo('!'));   // todas las personas, con o sin rol
+	createOpt(gPe,'+'+rolesPeople.join(','),'peopleRol',cuentaFilasTipo('+'+rolesPeople.join(',')));
+	opcionesPeople(gPe);
+	claves(cuentas).forEach(x => {
+		if (esEvento(x)){return}
+		createOpt(gPe,x.split(' ')[0],x,cuentas.get(x)||0);
+		gPe.lastChild.textContent+=sufijoRol(x);
+	});
+}
+
+function tiposPeople(select){
+	// los roles tal cual
+	const cuentas=cuentaCol2(CAMPO.tiporol);
+	opcionesPeople(select);
+	opcionesCuenta(select,claves(cuentas).filter(x => x && x!='-'),cuentas,sufijoRol);
+}
+
+function tiposFecha(select){
+	// otras apps: las fechas
+	const cuentas=cuentaCol2(fechaDe);
+	opcionesCuenta(select,claves(cuentas).filter(x => x[0]!='('),cuentas);
+}
+
 function crearSelType(){
 	// Rellena el selector de tipo (selector3) segun app y vista:
-	//  - mundo/annual: los tipos de evento EVT presentes en los datos.
+	//  - mundo/annual: los tipos de evento EVT presentes en los datos (misma
+	//    fuente que el contador, asi nunca se desincronizan).
 	//  - mundo/otras : list y dos grupos: events (codigo de 3 letras) y people (roles).
 	//  - people      : los roles tal cual.
-	let vista='';
-	if (document.getElementById('selector5')!=undefined){
-		vista=document.getElementById('selector5').value
-	}
-	let select=document.getElementById('selector3');
-	select.innerHTML='';
-
-	let optionDefault=document.createElement('option');
-	optionDefault.value='';
-	optionDefault.textContent=fsel3;
-	select.appendChild(optionDefault);
-
-	if (app=='mundo'){
-		if (vista=='annual'){
-			// Tipos EVT obtenidos dinamicamente de los datos (misma fuente que el
-			// contador, asi nunca se desincronizan). Antes estaban hardcodeados y
-			// salia 'party(0)' y faltaban seminar/championship.
-			addTiposEvento(select,cuentaTipoEVT(),false);
-		}else{
-			// list primero; despues dos grupos (optgroup), events y people, cada
-			// uno con su opcion de todos (events / people) al principio
-			let cuentas=cuentaCol2(CAMPO.tiporol);
-			createOpt(select,'list','list',sumaCuenta(cuentas,'list'));   // fuentes de informacion
-			const grupo=label => { const g=document.createElement('optgroup'); g.label=label; select.appendChild(g); return g; };
-			const gEv=grupo('events');
-			createOpt(gEv,'*','events',cuentaFilasTipo('*'));     // todos los eventos: event, venue y milonga
-			createOpt(gEv,'event','event*',sumaCuenta(cuentas,'event'));
-			addTiposEvento(gEv,cuentas,true);
-			const gPe=grupo('people');
-			createOpt(gPe,'!','people',cuentaFilasTipo('!'));   // todas las personas, con o sin rol
-			createOpt(gPe,'+'+rolesPeople.join(','),'peopleRol',cuentaFilasTipo('+'+rolesPeople.join(',')));
-			createOpt(gPe,'+'+rolesPublicos.join(','),'peoplePublic',cuentaFilasTipo('+'+rolesPublicos.join(',')));
-			createOpt(gPe,'!'+rolesPublicos.join(','),'peoplePrivate',cuentaFilasTipo('!'+rolesPublicos.join(',')));
-			claves(cuentas).forEach(x => {
-				if (esEvento(x)){return}
-				createOpt(gPe,x.split(' ')[0],x,cuentas.get(x)||0);
-				gPe.lastChild.textContent+=sufijoRol(x);
-			})
-		}
-	}else if (app=='people'){
-		let cuentas=cuentaCol2(CAMPO.tiporol);
-		let lista=claves(cuentas);
-		createOpt(select,'+'+rolesPublicos.join(','),'peoplePublic',cuentaFilasTipo('+'+rolesPublicos.join(',')));
-		createOpt(select,'!'+rolesPublicos.join(','),'peoplePrivate',cuentaFilasTipo('!'+rolesPublicos.join(',')));
-		lista.forEach(x => {
-			if (!x || x=='-'){return}
-			const opt=document.createElement('option');
-			opt.value=x;
-			opt.textContent=opTxt(x,cuentas.get(x)||0)+sufijoRol(x);
-			select.appendChild(opt);
-		});
-	}else{
-		let cuentas=cuentaCol2(fechaDe);
-		let lista=claves(cuentas);
-		lista.forEach(x => {
-			if (x[0]=='('){return}
-			const opt=document.createElement('option');
-			opt.value=x;
-			opt.textContent=opTxt(x,cuentas.get(x)||0);
-			select.appendChild(opt);
-			}
-		)
-	}
+	const sel5=document.getElementById('selector5');
+	const vista=sel5!=undefined ? sel5.value : '';
+	const select=document.getElementById('selector3');
+	vaciaSelect(select,fsel3);
+	if (app=='mundo' && vista=='annual'){ addTiposEvento(select,cuentaTipoEVT(),false); }
+	else if (app=='mundo'){ tiposMundo(select); }
+	else if (app=='people'){ tiposPeople(select); }
+	else { tiposFecha(select); }
 }
 
 function poblarAreas(select){
-	// Vacia y rellena el selector de area con sus valores y contadores.
-	select.innerHTML='';
-	let optionDefault=document.createElement('option');
-	optionDefault.value='';
-	optionDefault.textContent=fsel0;
-	select.appendChild(optionDefault);
-	let cuentas=cuentaCol(CAMPO.area);
-	claves(cuentas).forEach(x => {
-		const opt=document.createElement('option');
-		opt.value=x;
-		opt.textContent=opTxt(x,cuentas.get(x)||0);
-		select.appendChild(opt);
-	});
+	// Vacia y rellena el selector de area con sus valores y contadores
+	// (también '-': las filas sin area).
+	vaciaSelect(select,fsel0);
+	const cuentas=cuentaCol(CAMPO.area);
+	opcionesCuenta(select,claves(cuentas),cuentas);
 }
 
 function crearSelAreas(){
 	// Crea el selector de area (selector0) ya relleno.
-	let select=document.createElement('select');
-	select.id='selector0';
+	const select=crearSelect('selector0',change0);
 	poblarAreas(select);
-	select.addEventListener('change',change0);
 	return select;
 }
 
@@ -865,59 +819,31 @@ function comandoReset(){
 function crearSelCountry(){
 	// Rellena el selector de pais (selector1) con los paises del area elegida
 	// (o todos), con sus contadores segun la vista activa.
-	let area=document.getElementById('selector0').value;
-	let select=document.getElementById('selector1');
-	select.innerHTML='';
-	let optionDefault=document.createElement('option');
-	optionDefault.value='';
-	optionDefault.textContent=fsel1;
-	select.appendChild(optionDefault);
-	let cuentas= area=='' ? cuentaCol(CAMPO.country) : cuentaCol1(CAMPO.country,CAMPO.area,area);
-	claves(cuentas).forEach(x => {
-		if (x=='.'||x=='-'){return}
-		createOpt(select,x,x,cuentas.get(x)||0);
-	});
+	const area=document.getElementById('selector0').value;
+	const select=document.getElementById('selector1');
+	vaciaSelect(select,fsel1);
+	const cuentas= area=='' ? cuentaCol(CAMPO.country) : cuentaCol(CAMPO.country,CAMPO.area,area);
+	opcionesCuenta(select,claves(cuentas).filter(x => x!='.' && x!='-'),cuentas);
 }
 
 function crearSelCity(){
 	// Rellena el selector de ciudad (selector2) con las ciudades del pais o
 	// area elegidos (o todas), con contadores segun la vista activa.
-	let pais=document.getElementById('selector1').value;
-	let area=document.getElementById('selector0').value;
-	let select=document.getElementById('selector2');
-	select.innerHTML='';
-	var optionDefault=document.createElement('option');
-	optionDefault.value='';
-	optionDefault.textContent=fsel2;
-	select.appendChild(optionDefault);
-	let cuentas;
-	if (pais!=''){ cuentas=cuentaCol1(CAMPO.city,CAMPO.country,pais); }
-	else if (area!=''){ cuentas=cuentaCol1(CAMPO.city,CAMPO.area,area); }
-	else { cuentas=cuentaCol(CAMPO.city); }
-	claves(cuentas).forEach(x => {
-		if (x=='.'||x=='-'){return}
-		createOpt(select,x,x,cuentas.get(x)||0);
-	});
+	const pais=document.getElementById('selector1').value;
+	const area=document.getElementById('selector0').value;
+	const select=document.getElementById('selector2');
+	vaciaSelect(select,fsel2);
+	const cuentas= pais!='' ? cuentaCol(CAMPO.city,CAMPO.country,pais)
+		: area!='' ? cuentaCol(CAMPO.city,CAMPO.area,area) : cuentaCol(CAMPO.city);
+	opcionesCuenta(select,claves(cuentas).filter(x => x!='.' && x!='-'),cuentas);
 }
 
 function crearSelDates(){
 	// Rellena el selector de meses (selector4) con los 12 meses y cuantos
 	// eventos caen en cada uno (cuentaFechas), respetando los filtros activos.
-	let select=document.getElementById('selector4');
-	select.innerHTML='';
-	var optionDefault=document.createElement('option');
-	optionDefault.value='';
-	optionDefault.textContent=fsel4;
-	select.appendChild(optionDefault);
-	let lista=meses;
-	let cuentas=cuentaFechas();
-	lista.forEach(x => {
-		if(x==''||x=='-'){return}
-		const opt=document.createElement('option');
-		opt.value=x;
-		opt.textContent=opTxt(x,cuentas.get(x)||0);
-		select.appendChild(opt);
-	});
+	const select=document.getElementById('selector4');
+	vaciaSelect(select,fsel4);
+	opcionesCuenta(select,meses.filter(x => x!='' && x!='-'),cuentaFechas());
 }
 
 function claves(m){
@@ -934,7 +860,7 @@ function damecol(col1){
 
 function damecol1(col,col1,v1){
 	// Lista ordenada de valores unicos de col en las filas donde col1==v1.
-	return claves(cuentaCol1(col,col1,v1));
+	return claves(cuentaCol(col,col1,v1));
 }
 
 function prefijoVista(){
@@ -947,8 +873,7 @@ function prefijoVista(){
 }
 
 // nombre de cada rol: se muestra en el selector detras del contador (vacio = sin nombre)
-const NOMBRE_ROL={'-':'sin rol'};
-for (const r in ROLES){ NOMBRE_ROL[r]=ROLES[r].nombre; }
+const NOMBRE_ROL={'-':'sin rol', ...Object.fromEntries(Object.keys(ROLES).map(r => [r,ROLES[r].nombre]))};
 function sufijoRol(r){ const n=NOMBRE_ROL[r]; return n ? ' '+n : ''; }
 
 const rolesPublicos=Object.keys(ROLES).filter(r => ROLES[r].publico);   // ROLES_PUBLICOS en comun.py
@@ -967,29 +892,16 @@ function filaEnVista(fila,pref){
 	return fechaDe(fila).split('.')[0]==pref;
 }
 
-function cuentaCol(col1){
-	// Map valor->ocurrencias de una columna, contando solo las filas de la
-	// vista activa (prefijoVista).
+function cuentaCol(col,col1,v1){
+	// Map valor->ocurrencias de la columna col, contando solo las filas de la
+	// vista activa (prefijoVista) y, con col1, las que tienen col1==v1 (o v1=='all').
 	const pref=prefijoVista();
 	const m=new Map();
 	for (const fila of datos){
 		if (!filaEnVista(fila,pref)){continue}
-		const v=fila[col1];
+		if (col1!=undefined && v1!='all' && fila[col1]!=v1){continue}
+		const v=fila[col];
 		if (v!=''){ m.set(v,(m.get(v)||0)+1); }
-	}
-	return m;
-}
-
-function cuentaCol1(col,col1,v1){
-	// Como cuentaCol pero solo las filas donde col1==v1 (o v1=='all').
-	const pref=prefijoVista();
-	const m=new Map();
-	for (const fila of datos){
-		if (!filaEnVista(fila,pref)){continue}
-		if (v1=='all' || fila[col1]==v1){
-			const v=fila[col];
-			if (v!=''){ m.set(v,(m.get(v)||0)+1); }
-		}
 	}
 	return m;
 }
@@ -1093,11 +1005,11 @@ function getObj(i){
 			ciudad:datos[i][CAMPO.city],
 			tipo:datos[i][CAMPO.tiporol],
 			nombre:datos[i][CAMPO.name],
-			autor:variosSinFecha(datos[i]),   // varios sin la fecha
-			fechas:fechaDe(datos[i]),         // eventos: ultimo subcampo de varios
+			varios:leeVarios(datos[i]),       // {nom: [valores]} (aux.js)
+			fechas:fechaDe(datos[i]),         // eventos: subcampo fec de varios
 			privado:datos[i][CAMPO.private],  // people: comentarios privados
 			url:datos[i][CAMPO.urlfb],
-			idfoto:datos[i][CAMPO.idfoto]||'',  // campo 9: id de la foto, '' sin foto
+			idfoto:datos[i][CAMPO.idfoto]||'',  // campo 9: id de la foto, "-" sin foto
 			fila:datos[i],
 	}
 	return o;
@@ -1114,40 +1026,13 @@ function damelista(pais){
 	return res;
 }
 
-function change0(e){
-	// Cambio de area: recarga pais, ciudad, tipo y fechas, y repinta.
-	crearSelCountry();
-	crearSelCity();
-	crearSelType();
-	if (app!='people'){crearSelDates()}
-	renderGo();
-}
-
-function change1(e){
-	// Cambio de pais: recarga ciudad, tipo y fechas, y repinta.
-	crearSelCity();
-	crearSelType();
-	if (app!='people'){crearSelDates()}
-	renderGo();
-}
-
-function change2(e){
-	// Cambio de ciudad: recarga tipo y fechas, y repinta.
-	crearSelType();
-	if (app!='people'){crearSelDates()}
-	renderGo();
-}
-
-function change3(e){
-	// Cambio de tipo: recarga fechas y repinta.
-	if (app!='people'){crearSelDates()}
-	renderGo();
-}
-
-function change4(e){
-	// Cambio de mes: solo repinta.
-	renderGo();
-}
+// Cambios en cadena: cada selector recarga los que van detras y repinta
+// (area -> pais -> ciudad -> tipo -> fechas -> repinta)
+function change0(e){ crearSelCountry(); change1(e); }          // area
+function change1(e){ crearSelCity(); change2(e); }             // pais
+function change2(e){ crearSelType(); change3(e); }             // ciudad
+function change3(e){ if (app!='people'){crearSelDates()} change4(e); }   // tipo
+function change4(e){ renderGo(); }                             // mes: solo repinta
 
 function setSel(){
 	// Reconstruye el selector de tipo y muestra/oculta selectores segun la
@@ -1234,14 +1119,6 @@ function filtra(cadena1,cadena2){
 	return -1;
 }
 
-function borraTxt(cadena, palabrasAEliminar){
-	// De una lista por comas, quita los elementos que aparezcan en
-	// palabrasAEliminar y devuelve la lista resultante por comas.
-	const lista = cadena.split(',').map(p => p.trim()).filter(p => p);
-	const eliminar = palabrasAEliminar.split(',').map(p => p.trim()).filter(p => p);
-	const resultado = lista.filter(p => !eliminar.includes(p));
-	return resultado.join(',');
-}
 
 function listaPaises(s0,s1){
 	// Paises a recorrer en el render segun el area (s0) y el pais (s1) elegidos.
@@ -1290,89 +1167,72 @@ function cierraCabecera(header,contadorL2){
 	if (contadorL2==0){ header.parentNode.removeChild(header); }
 }
 
+function celdasVenue(mapa,venue){
+	// las 9 celdas del venue en la tabla de su ciudad: 0-6 los dias (domingo
+	// = 0), 7 la url del venue, 8 las milongas sin dia ('consultar')
+	if (!mapa.has(venue)){ mapa.set(venue,['','','','','','','','','']); }
+	return mapa.get(venue);
+}
+
+function apuntaRegular(mapa,vistos,item){
+	// la milonga en la tabla de su ciudad (mapa: venue -> celdas; vistos:
+	// las ya puestas). true si cuenta como linea nueva
+	if (item.tipo=='venue'){ celdasVenue(mapa,item.nombre)[7]=item.url; }
+	const esReg=item.fechas.split('.')[0]=='REG';
+	if (!esReg && item.tipo!='milonga'){ return false; }
+	const venue=(item.varios.loc||[''])[0];
+	// legado: milonga con fechas='' (sin dia ni hora): consultar
+	const clave=venue+'#'+(esReg ? item.fechas : '?')+'#'+item.nombre;
+	if (vistos.has(clave)){ return false; }
+	vistos.add(clave);
+	const valor=celdasVenue(mapa,venue);
+	// leeReg (aux.js): una milonga de varios días va en cada uno; la
+	// mensual, con sus semanas detrás de la hora (2nd,4th)
+	const reg=esReg ? leeReg(item.fechas) : null;
+	let hora=reg ? reg.hora : '';
+	if (reg && reg.frec=='M'){hora=(hora ? hora+' ' : '')+semanasReg(reg.semanas)}
+	if (!reg || !reg.dias.length){
+		// dia desconocido (REG.W.?.hora o sin fecha): 'consultar' en las
+		// celdas de la semana, con la hora si la hay
+		valor[8]=(valor[8]||'')+item.nombre+'|'+item.url+'|'+hora+'#';
+	}else{
+		for (const d of reg.dias){ valor[d]+=hora+'|'+item.nombre+'|'+item.url+'#'; }
+	}
+	return true;
+}
+
 function renderRegular(s0,s1,s2,s3,s4){
 	// Vista regular: agrupa las milongas REG por pais, ciudad y venue y las
 	// pinta en una tabla semanal (getTable). Devuelve el total de lineas.
 	const results=document.getElementById('resultados');
 	results.innerHTML='';
 	let contadorL1=0;
-
 	for (const area of listaPaises(s0,s1)) {
 		if (omitirPais(area,s0,s1,s2)){continue}
 		const entradas=damelista(area);
 		if (entradas.length==0){continue}
 		const header=cabeceraPais(results,area);
 		let contadorL2=0;
-
-		let porCiudad = new Map();
+		const porCiudad=new Map();   // ciudad -> {mapa: venue -> celdas, vistos}
 		for (const item of entradas) {
-
-			if (!pasaFiltros(item,s2,s3,s4)){continue}
-			if (!enArea(item,s0)){continue}
-
-			let ciudad=item.ciudad;
-			if (!porCiudad.has(ciudad)){
-				porCiudad.set(ciudad, { mapa: new Map(), vistos: new Set() });
-			}
-			let { mapa, vistos } = porCiudad.get(ciudad);
-
-			if (item.tipo=='venue'){
-				if (!mapa.has(item.nombre)){ mapa.set(item.nombre,['','','','','','','','','']); }
-				mapa.get(item.nombre)[7]=item.url;
-			}
-			if (item.fechas.split('.')[0]=='REG'){
-				// leeReg (aux.js): una milonga de varios días va en cada uno; la
-				// mensual, con sus semanas detrás de la hora (2nd,4th)
-				let venue=item.autor.split('#')[0];
-				const reg=leeReg(item.fechas);
-				let hora=reg ? reg.hora : '';
-				if (reg && reg.frec=='M'){hora=(hora ? hora+' ' : '')+semanasReg(reg.semanas)}
-				let clave=venue+'#'+item.fechas+'#'+item.nombre;
-				if (vistos.has(clave)){continue}
-				vistos.add(clave);
+			if (!pasaFiltros(item,s2,s3,s4) || !enArea(item,s0)){continue}
+			if (!porCiudad.has(item.ciudad)){ porCiudad.set(item.ciudad, { mapa: new Map(), vistos: new Set() }); }
+			const { mapa, vistos } = porCiudad.get(item.ciudad);
+			if (apuntaRegular(mapa,vistos,item)){
 				filasVisibles.add(item.fila);
 				contadorL2+=1;
-				contadorL1+=1;
-				if (!mapa.has(venue)){
-					mapa.set(venue,['','','','','','','','','']);
-				}
-				let valor=mapa.get(venue);
-				if (!reg || !reg.dias.length){
-					// dia desconocido (REG.W.?.hora): 'consultar' en las
-					// celdas de la semana, con la hora si la hay
-					valor[8]=(valor[8]||'')+item.nombre+'|'+item.url+'|'+hora+'#';
-				}else{
-					for (const d of reg.dias){ valor[d]+=hora+'|'+item.nombre+'|'+item.url+'#'; }
-				}
-				mapa.set(venue,valor);
-			} else if (item.tipo=='milonga'){
-				// legado: milonga con fechas='' (sin dia ni hora): consultar
-				let venue=item.autor.split('#')[0];
-				let clave=venue+'#?#'+item.nombre;
-				if (vistos.has(clave)){continue}
-				vistos.add(clave);
-				filasVisibles.add(item.fila);
-				contadorL2+=1;
-				contadorL1+=1;
-				if (!mapa.has(venue)){
-					mapa.set(venue,['','','','','','','','','']);
-				}
-				let valor=mapa.get(venue);
-				valor[8]=(valor[8]||'')+item.nombre+'|'+item.url+'|'+'#';
-				mapa.set(venue,valor);
 			}
 		}
-
 		porCiudad.forEach(({ mapa }, ciudad) => {
-			let tabla=getTable(mapa);
+			const tabla=getTable(mapa);
 			if (tabla!=''){
-				let caja=document.createElement('div');
+				const caja=document.createElement('div');
 				caja.className='cTabla';
 				caja.innerHTML=esc(ciudad)+'<br/>'+tabla;
 				results.appendChild(caja);
 			}
 		});
-
+		contadorL1+=contadorL2;
 		cierraCabecera(header,contadorL2);
 	}
 	results.innerHTML+='<br/><br/>';
@@ -1431,302 +1291,194 @@ function getTable(dataMap){
 	return filas>0 ? html : '';
 }
 
+// ── piezas de las vistas countries y annual ──
+
+function nuevoLi(margen){
+	// <li> de un elemento del listado
+	const li=document.createElement('li');
+	li.style.listStyleType='circle';
+	li.style.marginLeft=margen;
+	return li;
+}
+
+function agregaEnlace(li,url){
+	// enlace ↗️ a url detras del texto del li
+	li.appendChild(document.createTextNode(' '));
+	const link=document.createElement('a');
+	link.href=url;
+	link.innerHTML=icon('external');
+	link.target='_blank';
+	li.appendChild(link);
+}
+
+function etiquetaTipo(item){
+	// roles (personas) o etiqueta de color del tipo (eventos); '' sin tipo
+	if (item.tipo=='' || item.tipo=='-'){return ''}
+	if (app=='people' || !esEvento(item.tipo)){return spanRoles(item.tipo)}
+	const color=colorTipo.get(item.tipo) || '#DDD';
+	return '<span class="stipo" style="background-color:'+color+'">'+get3(item.tipo)+'</span>';
+}
+
+function fechaOComentario(item){
+	// {fecha, coment}: fecha EVT/REG (eventos) o comentario privado (people,
+	// campo 7, separado por ','): sus urls con icono (▶️ YouTube, 🌐 otra
+	// web) en fecha y el texto en coment (va en otro parentesis detras)
+	const campo7=item.fechas || item.privado || '';
+	if (campo7=='' || campo7=='-'){return {fecha:'', coment:''}}
+	const prt=campo7.split('.');
+	if (prt[0]=='REG'){return {fecha:'<div class="itemLinea">'+esc(textoReg(campo7))+'</div>', coment:''}}
+	if (prt[0]=='EVT'){return {fecha:'<div class="itemLinea">'+prt[2]+'.'+prt[4]+'</div>', coment:''}}
+	const resto=sinUrls(campo7);
+	return {fecha:urlsDe([campo7]).map(iconoUrl).join(' '), coment:resto ? '<div class="itemLinea">'+esc(resto)+'</div>' : ''};
+}
+
+function textoPersona(item,etiqueta,fc){
+	// app people: ciudad : nombre : roles : campo 6 (los txt como texto; vid,
+	// www y las urls de los txt con icono; contactos) : fecha o comentario
+	const ciudad=item.ciudad!='' ? '<div class="sCity">'+esc(item.ciudad)+'&nbsp;</div>' : '';
+	const textos=(item.varios.txt||[]).map(sinUrls).filter(Boolean);
+	let varios=textos.length ? '<div class="itemLinea">'+esc(textos.join(', '))+'&nbsp;</div>' : '';
+	varios+=iconosVarios(item.varios,item.url);
+	const scont=contactosVarios(item.varios);
+	if (scont) varios+=' '+scont;
+	const sfoto=iconoFoto(item.idfoto,false);
+	return ciudad+' : '+esc(item.nombre)+' : '+etiqueta.replace('event ','')+
+		' : '+varios+' : '+(fc.fecha||fc.coment)+(sfoto ? ' '+sfoto : '');
+}
+
+function textoElemento(item,etiqueta,fc){
+	// eventos (y personas en la app de eventos): [etiqueta] ciudad, ⭐nombre
+	// (roles) (fecha 👤 ↗️ ▶️ 🌐 contactos) [sala o texto] (comentario);
+	// sin parentesis vacios, unica coma detras de la ciudad
+	const scity=(item.ciudad!='' && item.ciudad!='-') ? esc(item.ciudad)+',&nbsp;' : '';
+	const fav=String(item.tipo).startsWith('event') ? iconoFav(item.nombre,item.ciudad) : '';
+	const slink=(item.url!='' && item.url!='-') ?
+		'<a href="'+item.url.replace(/"/g,'%22')+'" target="_blank">'+icon('external')+'</a>' : '';
+	const swww=[iconosVarios(item.varios,item.url),contactosVarios(item.varios)].filter(Boolean).join(' ');
+	const sfoto=iconoFoto(item.idfoto,esEvento(item.tipo));    // foto 👤: eventos, la portada antes
+	const dentro=[fc.fecha,sfoto,slink,swww].filter(Boolean).join(' ');
+	const esPersona=!esEvento(item.tipo);
+	const delante=esPersona ? '' : etiqueta.replace('event','').trim()+'&nbsp;';
+	const sroles=(esPersona && etiqueta) ? '&nbsp;('+spanRoles(item.tipo,' ')+')' : '';
+	const autor=sinUrls((item.varios.loc||item.varios.txt||[''])[0]);   // la sala de una milonga (loc) o el texto (txt)
+	return delante+scity+fav+esc(item.nombre)+sroles+(dentro ? '&nbsp;('+dentro+')' : '')+
+		(autor ? '&nbsp;['+esc(autor)+']' : '')+(fc.coment ? '&nbsp;('+fc.coment+')' : '');
+}
+
 function renderCountries(s0,s1,s2,s3,s4){
 	// Vista por defecto: lista por pais cada evento/persona que pasa los
 	// filtros, con su badge de tipo, ciudad, nombre, autor, fecha y enlace.
 	const results=document.getElementById('resultados');
 	results.innerHTML='';
 	let contadorL1=0;
-
 	for (const area of listaPaises(s0,s1)) {
 		if (omitirPais(area,s0,s1,s2,s3)){continue}
 		const entradas=damelista(area);
 		if (entradas.length==0){continue}
 		const header=cabeceraPais(results,area);
 		let contadorL2=0;
-
 		for (const item of entradas) {
-			if (!pasaFiltros(item,s2,s3,s4)){continue}
-			if (!enArea(item,s0)){continue}
-			if (!pasaFav2(item)){continue}
+			if (!pasaFiltros(item,s2,s3,s4) || !enArea(item,s0) || !pasaFav2(item)){continue}
 			filasVisibles.add(item.fila);
-
 			contadorL2+=1;
-			contadorL1+=1;
-			var li=document.createElement('li');
-			li.style.listStyleType='circle';
-			li.style.marginLeft='10px';
-
+			const li=nuevoLi('10px');
 			const span=document.createElement('span');
 			li.appendChild(span);
-
-			let span1='';
-			if (item.tipo!=''&&item.tipo!='-'){
-				if (app=='people'){
-					span1=spanRoles(item.tipo);
-				}else{
-					if (esEvento(item.tipo)){
-						let color=colorTipo.get(item.tipo);
-						if (color==undefined){color='#DDD'}
-						let tmp=get3(item.tipo);
-						span1='<span class="stipo" style="background-color:'+color+'">'+tmp+'</span>';
-					}else{
-						span1=spanRoles(item.tipo);
-					}
-				}
-			}
-
-			let span2='';
-			if (item.ciudad!=''){
-				span2='<div class="sCity">'+esc(item.ciudad)+'&nbsp;</div>';
-			}
-
-			let span3='';
-			if (item.autor!=''&&item.autor!='-'){
-				let tmp=item.autor;
-				let prt=tmp.split('#');
-				tmp=prt[0];
-				span3='<div class="itemLinea">'+esc(tmp)+'&nbsp;</div>';
-			}
-
-			let span4='';
-			let scoment='';   // comentario libre del campo 6: va en otro parentesis detras
-			// fecha EVT/REG (eventos) o comentario privado (people, campo 7, separado por ',')
-			const campo7=item.fechas || item.privado || '';
-			if (campo7!=''&&campo7!='-'){
-				let tmp=campo7;
-				let prt=tmp.split('.');
-				if (prt[0]=='REG'){
-					span4='<div class="itemLinea">'+esc(textoReg(tmp))+'</div>';
-				}else if (prt[0]=='EVT'){
-					span4='<div class="itemLinea">'+prt[2]+'.'+prt[4]+'</div>';
-				}else{
-					// las urls van con icono (▶️ YouTube, 🌐 otra web), no en el texto del comentario
-					span4=urlsDe([tmp]).map(iconoUrl).join(' ');
-					const resto=sinUrls(tmp);
-					if (resto) scoment='<div class="itemLinea">'+esc(resto)+'</div>';
-				}
-			}
-			if (app=='people'){
-				// campo 6: datos publicos separados por #; el texto, como antes, y las urls con icono (▶️ YouTube, 🌐 otra web)
-				const pub=(item.autor!=''&&item.autor!='-') ? String(item.autor).split('#') : [];
-				// urls en cualquier parte del subcampo (sin repetir); el texto, sin urls
-				const urls=urlsDe(pub,item.url);
-				const textos=pub.map(sinUrls).filter(Boolean);
-				span3=textos.length ? '<div class="itemLinea">'+esc(textos.join(', '))+'&nbsp;</div>' : '';
-				span3+=urls.map(iconoUrl).join(' ');
-				const sfoto=iconoFoto(item.idfoto,false);
-				item.texto=span2+' : '+esc(item.nombre)+' : '+span1.replace('event ','')+
-				' : '+span3+' : '+(span4||scoment)+(sfoto ? ' '+sfoto : '');
-				span.innerHTML=item.texto;
-			}else{
-				let scity=(item.ciudad!='' && item.ciudad!='-') ? esc(item.ciudad)+',&nbsp;' : '';
-				const fav=String(item.tipo).startsWith('event') ? iconoFav(item.nombre,item.ciudad) : '';
-				// enlace ↗️ dentro del paréntesis, junto a fecha o ▶️
-				let slink='';
-				if (item.url!=''&&item.url!='-'){
-					slink='<a href="'+item.url.replace(/"/g,'%22')+
-						'" target="_blank">'+icon('external')+'</a>';
-				}
-				// ▶️/🌐: urls de cualquier subcampo de varios (sin repetir ni la del ↗️)
-				const varios=(item.autor!=''&&item.autor!='-') ? String(item.autor).split('#') : [];
-				const urls=urlsDe(varios,item.url);
-				const swww=urls.map(iconoUrl).join(' ');
-				// foto 👤: por el id del campo 9 (eventos: la portada antes)
-				const sfoto=iconoFoto(item.idfoto,esEvento(item.tipo));
-				// (fecha o ▶️ 👤 ↗️ 🌐) y detras (comentario); sin parentesis vacios
-				const dentro=[span4,sfoto,slink,swww].filter(Boolean).join(' ');
-				// personas: roles entre parentesis detras del nombre; eventos: etiqueta delante
-				const esPersona=!esEvento(item.tipo);
-				const delante=esPersona ? '' : span1.replace('event','').trim()+'&nbsp;';
-				// roles separados por espacio (sin comas)
-				const sroles=(esPersona && span1) ? '&nbsp;('+spanRoles(item.tipo,' ')+')' : '';
-				// campo 5 (venue / escuela / evento) entre []
-				const autor=sinUrls(varios[0]||'');
-				const sautor=autor ? '&nbsp;['+esc(autor)+']' : '';
-				// unica coma: detras de la ciudad
-				item.texto=delante+scity+
-				fav+esc(item.nombre)+sroles+(dentro ? '&nbsp;('+dentro+')' : '')+sautor+
-				(scoment ? '&nbsp;('+scoment+')' : '');
-				span.innerHTML=item.texto;
-			}
-
-			if (app=='people' && item.url!=''&&item.url!='-') {
-				const spot=document.createTextNode(' ');
-				li.appendChild(spot);
-
-				const link=document.createElement('a');
-				link.href=item.url;
-				link.innerHTML=icon('external');
-				link.target='_blank';
-				li.appendChild(link);
-			}
-
+			const etiqueta=etiquetaTipo(item), fc=fechaOComentario(item);
+			item.texto=app=='people' ? textoPersona(item,etiqueta,fc) : textoElemento(item,etiqueta,fc);
+			span.innerHTML=item.texto;
+			if (app=='people' && item.url!='' && item.url!='-'){agregaEnlace(li,item.url)}
 			results.appendChild(li);
 		}
-		header.innerHTML+='<span class="cuenta">&nbsp;('+contadorL2+')</span>';
-
-		if (contadorL2==0){
-			header.parentNode.removeChild(header);
-		}
+		contadorL1+=contadorL2;
+		cierraCabecera(header,contadorL2);
 	}
 	results.innerHTML+='<br/><br/>';
 	return contadorL1;
+}
+
+const COLOR_MES=['#BFD7EA','#E8C2CA','#B4E197','#F7E1D7','#FFF1B5','#FFD6A5',
+	'#FFB3B3','#F6D7B0','#D0E6A5','#E7BFB1','#D1BFA7','#C6D8FF'];   // vista annual: un color por mes
+
+function entradaAnual(i){
+	// objeto de la fila i para la vista annual (null si no es un EVT visible):
+	// los ya pasados se reprograman al proximo año futuro (estimado)
+	const o=getObj(i);
+	if (o.fechas.split('.')[0]!='EVT' || ocultoEnAnual(o.tipo)){return null}
+	const p=o.fechas.split('.');
+	const actual=new Date();
+	let year=p[4];
+	const mes=parseInt(p[1]);
+	const dia=p[3].split('-')[0];
+	// dia sin fijar (EVT.mes.MES.?.año): va al principio de su mes, con
+	// '??', y no pasa hasta que acaba el mes
+	const sinDia=(dia=='?');
+	const fin=(y)=>(sinDia ? new Date(y,mes+1,0) : new Date(y,mes,dia));
+	if (fin(year)<actual){ year=actual.getFullYear(); }
+	if (fin(year)<actual){ year++; }
+	// arrastrado: la edición publicada ya pasó y se repite en el año
+	// siguiente hasta que exista la nueva (fecha estimada)
+	o.estimado=(String(year)!=p[4]);
+	o.ofecha=new Date(year,mes,sinDia ? 1 : dia);
+	o.colorMes=mes;
+	const pdia=(sinDia ? '??' : dia.toString().padStart(2, '0'));
+	o.pfecha=o.ofecha.getFullYear()+'.'+meses[o.ofecha.getMonth()]+' '+pdia;
+	o.pfecha2='&nbsp'.repeat(9)+pdia;
+	return o;
+}
+
+function sinFiltro(s){
+	// selector sin filtro: vacio o 'all'
+	return s=='' || s=='all';
+}
+
+function textoAnual(item,mismoMes){
+	// fecha (de color por mes; si sigue el mismo mes, solo el dia) tipo ⭐nombre (ciudad,pais) ⏳
+	let tipo=item.tipo.replace('event ','').trim();
+	if (tipo=='championship'){ tipo='champion'; }
+	const stipo=tipo=='' ? '' : '<span class="stipo3" style="color:#444;background-color:'+colorTipo.get(item.tipo)+
+		'">'+esc(tipo)+'&nbsp;'.repeat(Math.max(1,10-tipo.length))+'</span>';   // relleno a 10: columnas alineadas al copiar/pegar
+	const sfecha=item.pfecha=='' ? '' : '<span class="fechaCompacta" style="background-color:'+COLOR_MES[item.colorMes]+
+		'">'+(mismoMes ? item.pfecha2 : item.pfecha)+'&nbsp;</span>';
+	let nombre=item.nombre;
+	const corte=window.innerWidth/20;
+	if (nombre.length>corte){ nombre=nombre.substring(0,corte)+' ..'; }
+	// sin favorito (y con favoritos cargados): 3 blancos en el hueco del emoji
+	const snombre='<span>'+(iconoFav(item.nombre,item.ciudad)||(favLista.length ? '&nbsp;'.repeat(3) : ''))+esc(nombre)+'</span>';
+	return sfecha+stipo+'&nbsp;'+snombre+'&nbsp;('+esc(item.ciudad)+','+esc(item.pais)+')'+
+		(item.estimado ? '&nbsp;<span title="fecha estimada: repite la edición anterior">&#9203;</span>' : '');
 }
 
 function renderAnnualCompact(s0,s1,s2,s3,s4){
 	// Vista annual: lista solo eventos EVT ordenados por fecha. Los ya pasados
 	// se reprograman al proximo año futuro; se colorea por mes y se agrupa el
 	// dia bajo el mismo mes. Aplica los filtros area/pais/ciudad/tipo/fecha.
-	const colorMes=[
-	'#BFD7EA',
-	'#E8C2CA',
-	'#B4E197',
-	'#F7E1D7',
-	'#FFF1B5',
-	'#FFD6A5',
-	'#FFB3B3',
-	'#F6D7B0',
-	'#D0E6A5',
-	'#E7BFB1',
-	'#D1BFA7',
-	'#C6D8FF',
-	];
-
 	const results=document.getElementById('resultados');
 	results.innerHTML='';
-	let contadorL1=0;
-	let entradas=[];
-	const area=s0;
-
+	const entradas=[];
 	for (let i=0;i<datos.length;i++){
-
-		if (
-		      s0!='' &&
-		      s0!='all' &&
-		      (datos[i][CAMPO.area]!=s0)
-		){continue}
-
-		let o=getObj(i);
-		let regular=o.fechas.split('.')[0];
-		if ( regular!='EVT' ){continue}
-		if (ocultoEnAnual(o.tipo)){continue}
-
-		let fechas=o.fechas;
-		if ( fechas=='-' || fechas=='' ){continue}
-
-		const actual=new Date();
-		let year=o.fechas.split('.')[4];
-		const mes=parseInt(o.fechas.split('.')[1]);
-		const dia=o.fechas.split('.')[3].split('-')[0];
-		// dia sin fijar (EVT.mes.MES.?.año): va al principio de su mes, con
-		// '??', y no pasa hasta que acaba el mes
-		const sinDia=(dia=='?');
-		const fin=(y)=>(sinDia ? new Date(y,mes+1,0) : new Date(y,mes,dia));
-		if (fin(year)<actual){ year=actual.getFullYear(); }
-		if (fin(year)<actual){ year++; }
-		// arrastrado: la edición publicada ya pasó y se repite en el año
-		// siguiente hasta que exista la nueva (fecha estimada)
-		o.estimado=(String(year)!=o.fechas.split('.')[4]);
-		const f3=new Date(year,mes,sinDia ? 1 : dia);
-		o.ofecha=f3;
-		o.colorMes=mes;
-
-		const pdia=(sinDia ? '??' : dia.toString().padStart(2, '0'));
-		o.pfecha=f3.getFullYear()+'.'+meses[f3.getMonth()]+' '+pdia;
-		o.pfecha2='&nbsp'.repeat(9)+pdia;
-		entradas.push(o);
+		if (!sinFiltro(s0) && datos[i][CAMPO.area]!=s0){continue}
+		const o=entradaAnual(i);
+		if (o){entradas.push(o)}
 	}
-
 	entradas.sort(function(a, b){return a.ofecha-b.ofecha})
-
-	let a3=s3.split(',');
-	let mesAnterior=-1;
+	const a3=s3.split(',');
+	let contadorL1=0, mesAnterior=-1;
 	for (const item of entradas) {
-
-		if (
-		      s4!='' &&
-		      s4!='all' &&
-		      (item.fechas.indexOf(s4)==-1)
-		){continue}
-
-		if (
-		      s3!='' &&
-		      s3!='all' &&
-		      (a3.indexOf(item.tipo)==-1)
-		){continue}
-
-		if (
-		      s2!='' &&
-		      s2!='all' &&
-		      s2!=item.ciudad
-		){continue}
-
-		if (
-		      s1!='' &&
-		      s1!='all' &&
-		      s1!=item.pais
-		){continue}
-
+		if (!sinFiltro(s4) && item.fechas.indexOf(s4)==-1){continue}
+		if (!sinFiltro(s3) && a3.indexOf(item.tipo)==-1){continue}
+		if (!sinFiltro(s2) && s2!=item.ciudad){continue}
+		if (!sinFiltro(s1) && s1!=item.pais){continue}
 		if (!pasaFav2(item)){continue}
-
 		filasVisibles.add(item.fila);
 		contadorL1+=1;
-
-		const li=document.createElement('li');
-		li.style.listStyleType='circle';
-		li.style.marginLeft='20px';
-
+		const li=nuevoLi('20px');
 		const span=document.createElement('span');
-
-		let tipo=item.tipo.replace('event ','').trim();
-		if (tipo=='championship'){
-			tipo='champion';
-		}
-
-		let stipo='';
-		if (tipo!=''){
-			stipo='<span class="stipo3" style="color:#444;background-color:'+colorTipo.get(item.tipo)+
-			'">'+esc(tipo)+'&nbsp;'.repeat(Math.max(1,10-tipo.length))+'</span>';   // relleno a 10: columnas alineadas al copiar/pegar
-		}
-
-		let span2='';
-		if (item.autor!='') {
-			span2='<span>'+esc(item.autor)+'</span>';
-		}
-
-		let fff=(item.colorMes==mesAnterior) ? item.pfecha2 : item.pfecha;
+		item.texto=textoAnual(item,item.colorMes==mesAnterior);
 		mesAnterior=item.colorMes;
-
-		let sfecha='';
-
-		if (item.pfecha!='') {
-			sfecha='<span class="fechaCompacta" style="background-color:'+colorMes[item.colorMes]+
-			'">'+fff+'&nbsp;</span>';
-		}
-
-		let nombre=item.nombre;
-		let corte= window.innerWidth/20;
-		if (nombre.length>corte){
-			nombre=nombre.substring(0,corte)+' ..';
-		}
-		// sin favorito (y con favoritos cargados): 3 blancos en el hueco del emoji
-		let snombre='<span>'+(iconoFav(item.nombre,item.ciudad)||(favMapa.size ? '&nbsp;'.repeat(3) : ''))+esc(nombre)+'</span>';
-
-		item.texto=sfecha+stipo+'&nbsp;'+snombre+'&nbsp;('+esc(item.ciudad)+','+esc(item.pais)+')'+
-			(item.estimado ? '&nbsp;<span title="fecha estimada: repite la edición anterior">&#9203;</span>' : '');
 		span.innerHTML=item.texto;
 		li.appendChild(span);
-
-		if (item.url) {
-			const spot=document.createTextNode(' ');
-			li.appendChild(spot);
-			const link=document.createElement('a');
-			link.href=item.url;
-			link.innerHTML=icon('external');
-			link.target='_blank';
-			li.appendChild(link);
-		}
+		if (item.url){agregaEnlace(li,item.url)}
 		results.appendChild(li);
 	}
 	results.innerHTML+='<br/><br/>';
