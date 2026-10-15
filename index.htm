@@ -319,7 +319,7 @@ function peopleDisponible(){
 
 const COLOR_TIPO_MUNDO={'milonga':'#adf5d7','venue':'#fae3ad','event':'#e5f9ff','event party':'#d7f6fa',
 	'event festival':'#c3e8ff','event encuentro':'#7db1ff','event marathon':'#acccfc',
-	'event championship':'#ff6961','venue academy':'#f3d4ff','list':'#e0d4f7'};   // color de cada tipo de evento (app mundo)
+	'event championship':'#ff6961','academy':'#f3d4ff','list':'#e0d4f7'};   // color de cada tipo de evento (app mundo)
 
 function eligeDatos(){
 	// datos, titulos y colores por tipo segun la app (mundo: eventos y
@@ -328,7 +328,7 @@ function eligeDatos(){
 		datos=publicEvent.concat(peopleDisponible());   // privado si existe (local), si no el público (web)
 		titulo1='OnlyTangoInfo';
 		titulo2='<a href="https://www.facebook.com/profile.php?id=100093497583670" target="_blank">by KoKoTango</a>'+
-			// versión: privada (local, con privatePeople.out.js) o pública (la web, sin él), como caras.htm
+			// versión: privada (local, con privatePeople.out.js) o pública (la web, sin él), como wwt.htm
 			'<br><small>'+(typeof privatePeople!='undefined' ? 'private version' : 'public version')+'</small>';
 		for (const t in COLOR_TIPO_MUNDO){ colorTipo.set(t,COLOR_TIPO_MUNDO[t]); }
 		for (const r in ROLES){ colorTipo.set(r,ROLES[r].color); }
@@ -633,7 +633,7 @@ function createOpt(s,v,t,n){
 
 function get3(a){
 	// Codigo de 3 letras de un tipo: su ultima palabra ('event festival' -> 'FES',
-	// 'venue academy' -> 'ACA', 'venue' -> 'VEN'); 'event' devuelve 'EVT'.
+	// 'academy' -> 'ACA', 'venue' -> 'VEN'); 'event' devuelve 'EVT'.
 	// Rellena con '-' si tiene menos de 3 letras.
 	if (a=='event'){
 		return 'EVT';
@@ -647,7 +647,7 @@ function addTiposEvento(select,cuentas,conPrefijo){
 	// en 'cuentas', en orden alfabetico. Compartido por las vistas countries y
 	// annual; 'conPrefijo' antepone el codigo de 3 letras (ej. 'MAR.marathon').
 	claves(cuentas).forEach(x => {
-		if (x=='event' || x=='list' || !esEvento(x)){return}   // list: opcion propia, al inicio
+		if (x=='event' || x=='list' || !esEvento(x)){return}   // list: opcion propia, la primera de events
 		let y=x.replace('event ','').trim();
 		if (y=='championship'){y='champion'}
 		createOpt(select,x,conPrefijo?get3(y)+'.'+y:y,cuentas.get(x)||0);
@@ -680,12 +680,12 @@ function opcionTexto(dest,valor,texto){
 }
 
 function tiposMundo(select){
-	// list primero; despues dos grupos (optgroup), events y people, cada
-	// uno con su opcion de todos (events / people) al principio
+	// dos grupos (optgroup), events y people, cada uno con su opcion de
+	// todos (events / people) al principio; en events, list va antes
 	const cuentas=cuentaCol2(CAMPO.tiporol);
-	createOpt(select,'list','list',sumaCuenta(cuentas,'list'));   // fuentes de informacion
 	const grupo=label => { const g=document.createElement('optgroup'); g.label=label; select.appendChild(g); return g; };
 	const gEv=grupo('events');
+	createOpt(gEv,'list','list',sumaCuenta(cuentas,'list'));   // fuentes de informacion
 	createOpt(gEv,'*','events',cuentaFilasTipo('*'));     // todos los eventos: event, venue y milonga
 	createOpt(gEv,'event','event*',sumaCuenta(cuentas,'event'));
 	addTiposEvento(gEv,cuentas,true);
@@ -717,7 +717,7 @@ function crearSelType(){
 	// Rellena el selector de tipo (selector3) segun app y vista:
 	//  - mundo/annual: los tipos de evento EVT presentes en los datos (misma
 	//    fuente que el contador, asi nunca se desincronizan).
-	//  - mundo/otras : list y dos grupos: events (codigo de 3 letras) y people (roles).
+	//  - mundo/otras : dos grupos: events (codigo de 3 letras y list) y people (roles).
 	//  - people      : los roles tal cual.
 	const sel5=document.getElementById('selector5');
 	const vista=sel5!=undefined ? sel5.value : '';
@@ -1348,8 +1348,8 @@ function textoPersona(item,etiqueta,fc){
 
 function textoElemento(item,etiqueta,fc){
 	// eventos (y personas en la app de eventos): [etiqueta] ciudad, ⭐nombre
-	// (roles) (fecha 👤 ↗️ ▶️ 🌐 contactos) [sala o texto] (comentario);
-	// sin parentesis vacios, unica coma detras de la ciudad
+	// (roles) (fecha 👤 ↗️ ▶️ 🌐 contactos) [sala o texto] org: organizadores (solo
+	// milongas) (comentario); sin parentesis vacios, unica coma detras de la ciudad
 	const scity=(item.ciudad!='' && item.ciudad!='-') ? esc(item.ciudad)+',&nbsp;' : '';
 	const fav=String(item.tipo).startsWith('event') ? iconoFav(item.nombre,item.ciudad) : '';
 	const slink=(item.url!='' && item.url!='-') ?
@@ -1361,8 +1361,10 @@ function textoElemento(item,etiqueta,fc){
 	const delante=esPersona ? '' : etiqueta.replace('event','').trim()+'&nbsp;';
 	const sroles=(esPersona && etiqueta) ? '&nbsp;('+spanRoles(item.tipo,' ')+')' : '';
 	const autor=sinUrls((item.varios.loc||item.varios.txt||[''])[0]);   // la sala de una milonga (loc) o el texto (txt)
+	const orgs=item.tipo=='milonga' ? (item.varios.org||[]).join(', ') : '';   // quien organiza la milonga (org)
 	return delante+scity+fav+esc(item.nombre)+sroles+(dentro ? '&nbsp;('+dentro+')' : '')+
-		(autor ? '&nbsp;['+esc(autor)+']' : '')+(fc.coment ? '&nbsp;('+fc.coment+')' : '');
+		(autor ? '&nbsp;['+esc(autor)+']' : '')+(orgs ? '&nbsp;org:&nbsp;'+esc(orgs) : '')+
+		(fc.coment ? '&nbsp;('+fc.coment+')' : '');
 }
 
 function renderCountries(s0,s1,s2,s3,s4){

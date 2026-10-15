@@ -2,7 +2,7 @@
 
 aux.js : datos auxiliares escritos a mano (en data/). Antes roles.js y favoritos.js.
 
-  - index.htm y wwt/caras.htm lo cargan con <script>; push.sh lo sube.
+  - index.htm y wwt/wwt.htm lo cargan con <script>; push.sh lo sube.
   - import/comun.py (lee_aux) lee "var CAMPO =","var ROLES =",
     "var ROLES_EQUIVALENCIAS =" y "var favoritos =" como JSON: dentro, comillas dobles y sin comentarios
     (se toleran comas finales). Los comentarios, fuera.
@@ -39,7 +39,7 @@ varios (campo 6): subcampos con nombre de tres letras, en cualquier fila
   lat lon  coordenadas                      event*, venue
   dir      dirección o "País, Ciudad"       event*, venue
   loc      local o sala                     milonga
-  org      quién organiza (lista; caras.htm enlaza los que son personas)
+  org      quién organiza (lista; wwt.htm enlaza los que son personas)
   www      webs que no son de Facebook (lista; la de FB va en la url;
            en list, la url de la lista)
   vid      vídeos: YouTube, Vimeo (lista)
@@ -124,14 +124,14 @@ function textoReg(f){
 }
 
 // ═══════════════ UTILIDADES DE LAS PÁGINAS ═══════════════
-// (index.htm, wwt/caras.htm y review/index.htm)
+// (index.htm, wwt/wwt.htm y review/index.htm)
 
-// true si el tipo (campo 4) es de un evento, venue, milonga o list (su primera
+// true si el tipo (campo 4) es de un evento, venue, milonga, academy o list (su primera
 // palabra); si no, es una persona. Única regla para distinguirlos en las
 // páginas (en Python: es_tipo_evento de review/page.py). list: fuente de
 // información; las mundiales tienen área 'World', país 'world' y ciudad '*world'
 function esEvento(tipo){
-  return ['event','venue','milonga','list'].includes(String(tipo).trim().split(' ')[0]);
+  return ['event','venue','milonga','academy','list'].includes(String(tipo).trim().split(' ')[0]);
 }
 
 // url para comparar (la misma página aunque se escriba distinto): sin https://,
