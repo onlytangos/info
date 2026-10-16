@@ -208,6 +208,7 @@ var publicPeople=[
   ["Asia","South Korea","Seoul","art,org","Arman Jjd","txt:Photographer, TangoDJ, Milonguero","-","https://www.facebook.com/jjdarman","rmwbmx"],
   ["Asia","Japan","Tokyo","art","Mayumi Endou","www:https://mayumix0920.wixsite.com/studio710#ins:arakiymayumi_tango710#txt:{Araki&Mayumiアルゼンチンタンゴダンサー/インストラクター🇦🇷神保町スタジオ710主宰💁🏻‍♀️¬Tango studio 710}","-","https://www.facebook.com/profile.php?id=100000487412503","vwzmcn"],
   ["Asia","Japan","Tokyo","art","Hazuki Tango","txt:Love and Shiny 💓✨💓","-","https://www.facebook.com/hazuki.tango","etmybs"],
+  ["-","-","-","djm,org","Teo Rumi Tango","txt:{Tango DJ.¬Milonga Org¬First SSunday of every month.¬AMunorea¬Sometimes the 5th Saturday.}","-","https://www.facebook.com/teo.rumi.tango","fabsos"],
   ["Asia","South Korea","Busan","p26","Hyejeong Park (Abby)","vid:https://www.youtube.com/watch?v=BpMM4Jl7-wc#txt:동아대학교","-","https://www.facebook.com/hyejeong.park.161","cktzlx"],
   ["Asia","-","-","p26","Agape","-","-","-","-"],
   ["Asia","-","-","p26","Ahyun","vid:https://www.youtube.com/watch?v=74I8lfz5KHc","-","-","-"],
@@ -368,4 +369,4 @@ var publicPeople=[
   ["Asia","-","-","p26","Tango Jerry","-","-","-","-"],
   ["Asia","-","-","p26","Tj","-","-","-","-"],
 ];
-var publicPeopleFecha="2026-10-15";
+var publicPeopleFecha="2026-10-16";
