@@ -1,6 +1,6 @@
 /*
 
-aux.js : datos auxiliares escritos a mano (en data/). Antes roles.js y favoritos.js.
+aux.js : datos auxiliares escritos a mano (en datajs/). Antes roles.js y favoritos.js.
 
   - index.htm y wwt/wwt.htm lo cargan con <script>; push.sh lo sube.
   - import/comun.py (lee_aux) lee "var CAMPO =","var ROLES =",
@@ -18,7 +18,7 @@ comun.CAMPO.name). People y eventos comparten posiciones:
   tiporol 3  people: roles (art,org...)              eventos: milonga, event...
   varios 5   people: datos públicos separados por #  eventos: subcampos con # (abajo)
   private 6  people: comentarios privados            eventos: "-"
-  idfoto 8   id de la foto (6 letras, p.ej. abcdef; review/fotoid.py); "-" =
+  idfoto 8   id de la foto (6 letras, p.ej. abcdef; import/fotoid.py); "-" =
              sin foto. En todas las fuentes: el que trae se queda; vacío o "-", lo
              pone foto_ids (comun.sh) al generar, y en *.out.js, paso1
 fecha regular (REG, lo que se repite: milongas...): la misma gramática en
@@ -37,7 +37,8 @@ varios (campo 6): subcampos con nombre de tres letras, en cualquier fila
   valores: entre llaves y separados por ¬ (org:{Ana¬Luis}); con uno solo,
   sin llaves (org:Ana). # ¬ { } no van dentro de un valor (se quitan)
   lat lon  coordenadas                      event*, venue
-  dir      dirección o "País, Ciudad"       event*, venue
+  dir      dirección (no solo país y ciudad: event*, venue
+           esos ya van en sus campos; paso0 quita el dir que solo los repite)
   loc      local o sala                     milonga
   org      quién organiza (lista; wwt.htm enlaza los que son personas)
   www      webs que no son de Facebook (lista; la de FB va en la url;
@@ -49,14 +50,14 @@ varios (campo 6): subcampos con nombre de tres letras, en cualquier fila
   kak      KakaoTalk: ID o enlace open.kakao.com (lista)
   ema      emails (lista)
            (contactos: en publicPeople solo url e ins; en publicEvent ninguno,
-           solo org. Los quita import/paso1-merge.sh)
+           solo org. Los quita import/paso1.py)
   txt      texto libre: bio, escuela... (lista; people)
   fec      fecha EVT.../REG... (event*, milonga)
 Los que no hay, no se ponen; se escriben en ese orden (lat lon dir loc org
 www vid ins tel wec kak ema txt fec) (import/campos.py:
 VARIOS, lee_varios, escribe_varios; aquí, leeVarios). Ejemplos:
   milonga  loc:Nou#org:Thomas Rieser#www:https://...#fec:REG.W.5.2100-0300
-  event    lat:45.76#lon:1.33#dir:France, Boisseuil#org:{Ana¬Luis}#fec:EVT.9.OCT.23-25.2026
+  event    lat:45.76#lon:1.33#dir:12 Rue du Stade#org:{Ana¬Luis}#fec:EVT.9.OCT.23-25.2026
   venue    lat:41.64#lon:-0.88#dir:C/ Rocasolano, 3, Zaragoza
   people   vid:https://youtu.be/...#txt:{Tango DJ¬Organizer of Milonga Loca}
 */
@@ -128,7 +129,7 @@ function textoReg(f){
 
 // true si el tipo (campo 4) es de un evento, venue, milonga, academy o list (su primera
 // palabra); si no, es una persona. Única regla para distinguirlos en las
-// páginas (en Python: es_tipo_evento de review/page.py). list: fuente de
+// páginas (en Python: es_tipo_evento de import/pagefb.py). list: fuente de
 // información; las mundiales tienen área 'World', país 'world' y ciudad '*world'
 function esEvento(tipo){
   return ['event','venue','milonga','academy','list'].includes(String(tipo).trim().split(' ')[0]);
@@ -152,8 +153,8 @@ function claveUrl(u){
   return ruta+(ps.length ? '?'+ps.join('&') : '');
 }
 
-// foto de un id (campo 9, idfoto): la primera que haya en review/foto0,1,2,9/
-// (eventos 0,2,1,9: la portada antes), según fotosId de review/fotoid.js
+// foto de un id (campo 9, idfoto): la primera que haya en import/src.comun/fotos/foto0,1,2,9/
+// (eventos 0,2,1,9: la portada antes), según fotosId de datajs/fotoid.js
 // (se carga después de aux.js: se lee en la primera llamada).
 // {carpeta, fichero: '<id>.<ext>'}; null si no tiene
 let fotoSetsCache=null;

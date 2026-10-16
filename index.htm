@@ -253,16 +253,16 @@ a#link{
 }
 </style>
 
-<script src='data/aux.js'></script>  <!-- ROLES y favoritos, compartido con comun.py -->
-<script id='fuente1' src='data/publicEvent.out.js'></script>
-<script id='fuente2' src='data/publicPeople.out.js'></script>
-<script id='fuente3' src='data/privatePeople.out.js'></script>
-<script id='fuente4' src='review/fotoid.js'></script>  <!-- fotosId: fotos de review/foto0,1,2,9/ (opcional) -->
+<script src='datajs/aux.js'></script>  <!-- ROLES y favoritos, compartido con comun.py -->
+<script id='fuente1' src='datajs/publicEvent.out.js'></script>
+<script id='fuente2' src='datajs/publicPeople.out.js'></script>
+<script id='fuente3' src='datajs/privatePeople.out.js'></script>
+<script id='fuente4' src='datajs/fotoid.js'></script>  <!-- fotosId: fotos de import/src.comun/fotos/foto0,1,2,9/ (opcional) -->
 
 
 <script>
 
-// indices de los 9 campos de cada fila de datos: CAMPO (data/aux.js)
+// indices de los 9 campos de cada fila de datos: CAMPO (datajs/aux.js)
 
 const meses=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 const opcionesVistas=['countries','annual','regular'];
@@ -515,16 +515,16 @@ function cargaFavoritos(){
 	}
 }
 
-// ── Fotos (review/fotoid.js, opcional; lo genera review/fotoid.py) ──
+// ── Fotos (datajs/fotoid.js, opcional; lo genera import/fotoid.py) ──
 // El campo 9 de cada fila (CAMPO.idfoto) es el id de su foto (6 letras), "-"
-// si no tiene. Con ese id puede haber foto en review/foto0/ (a mano), foto1/
+// si no tiene. Con ese id puede haber foto en import/src.comun/fotos/foto0/ (a mano), foto1/
 // (perfil), foto2/ (portada) y foto9/ (dudosas): se toma la primera en orden
 // 0,1,2,9 (eventos 0,2,1,9: la portada antes). fotosId[carpeta] = ['<id>.jpg',...]
 function iconoFoto(idfoto,evento){
 	// Enlace 👤 a la foto de la persona o evento; si no tiene, ''.
 	// (fotoDeId de aux.js)
 	const f=fotoDeId(idfoto,evento);
-	return f ? '<a href="review/foto'+f.carpeta+'/'+f.fichero+'" onclick="return toggleFoto(this)">'+icon('user')+'</a>' : '';
+	return f ? '<a href="import/src.comun/fotos/foto'+f.carpeta+'/'+f.fichero+'" onclick="return toggleFoto(this)">'+icon('user')+'</a>' : '';
 }
 function toggleFoto(a){
 	// Click en 👤: muestra la foto justo al lado del 👤; otro click en 👤 o en la foto la quita.
