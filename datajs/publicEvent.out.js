@@ -1808,7 +1808,7 @@ var publicEvent=[
   ["Asia","South Korea","Seoul","milonga","Orange","loc:Tango Andante#org:Gaea Kim#fec:REG.W.2.1930-2400","-","https://www.facebook.com/tango.andante","uqshdg"],
   ["Asia","South Korea","Chuncheon","event marathon","ChunCheon Tango Marathon","lat:37.880506#lon:127.727761#dir:South Korea, Chuncheon-si#org:{Gaea Kim¬John & White Bear¬John¬White Bear}#vid:https://www.youtube.com/watch?v=WpGtuqC4ZAE#fec:EVT.9.OCT.2-5.2026","-","https://www.facebook.com/groups/413601948060266","cawytj"],
   ["Asia","South Korea","Busan","milonga","Gato milonga","org:Blanc Jo","-","-","-"],
-  ["Asia","South Korea","Seoul","milonga","Loca","loc:Tango Club Ocho#org:{Seon Min Lee¬포포 [Popo]}#fec:REG.W.6.2000-0200","-","https://www.facebook.com/ocho.tango.5","zmruwy"],
+  ["Asia","South Korea","Seoul","milonga","Loca","loc:Tango Club Ocho#org:{Seon Min Lee¬포포 [Popo]}#fec:REG.M.6.2-3-4-L.2000-0200","-","https://www.facebook.com/ocho.tango.5","zmruwy"],
   ["Asia","South Korea","Busan","event marathon","Busan Tango Marathon","lat:35.173112#lon:129.071412#org:Moses Park (moses park)#vid:https://www.youtube.com/watch?v=lYlUvSrgNa4#fec:EVT.5.JUN.23-28.2027","-","https://www.facebook.com/groups/242833006140226","rwpkjh"],
   ["Asia","South Korea","Changwon","event festival","Cherry Blossoms Milonga","org:{Han Pa (Han pacino)¬Han pacino}#fec:EVT.2.MAR.25-28.2027","-","https://www.facebook.com/groups/1278008533337836","ngeuiu"],
   ["Asia","South Korea","Busan","event festival","RoyBeDDong","org:{Rob Roy (롭로이)¬Kwang Seob Kim (so ddong)¬Beto Kim (땅고지기)¬Beto¬Kim}#fec:EVT.11.DEC.18-20.2026","-","https://www.facebook.com/photo/?fbid=10236759219934099&set=pcb.10236759220614116","fkrchy"],
