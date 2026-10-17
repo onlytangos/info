@@ -253,7 +253,7 @@ a#link{
 }
 </style>
 
-<script src='datajs/aux.js'></script>  <!-- ROLES y favoritos, compartido con comun.py -->
+<script src='datajs/aux.js'></script>  <!-- TIPOS, ROLES y favoritos, compartido con comun.py -->
 <script id='fuente1' src='datajs/publicEvent.out.js'></script>
 <script id='fuente2' src='datajs/publicPeople.out.js'></script>
 <script id='fuente3' src='datajs/privatePeople.out.js'></script>
@@ -317,20 +317,16 @@ function peopleDisponible(){
 	return (typeof privatePeople!='undefined') ? privatePeople : publicPeople;
 }
 
-const COLOR_TIPO_MUNDO={'milonga':'#adf5d7','venue':'#fae3ad','event':'#e5f9ff','event party':'#d7f6fa',
-	'event festival':'#c3e8ff','event encuentro':'#7db1ff','event marathon':'#acccfc',
-	'event championship':'#ff6961','academy':'#f3d4ff','list':'#e0d4f7'};   // color de cada tipo de evento (app mundo)
-
 function eligeDatos(){
 	// datos, titulos y colores por tipo segun la app (mundo: eventos y
-	// personas; people: solo personas). Los colores de los roles, de aux.js
+	// personas; people: solo personas). Los colores de los tipos y los roles, de aux.js
 	if (app=='mundo'){
 		datos=publicEvent.concat(peopleDisponible());   // privado si existe (local), si no el público (web)
 		titulo1='OnlyTangoInfo';
 		titulo2='<a href="https://www.facebook.com/profile.php?id=100093497583670" target="_blank">by KoKoTango</a>'+
 			// versión: privada (local, con privatePeople.out.js) o pública (la web, sin él), como wwt.htm
 			'<br><small>'+(typeof privatePeople!='undefined' ? 'private version' : 'public version')+'</small>';
-		for (const t in COLOR_TIPO_MUNDO){ colorTipo.set(t,COLOR_TIPO_MUNDO[t]); }
+		for (const t in TIPOS){ colorTipo.set(t,TIPOS[t].color); }   // tipos de evento (aux.js)
 		for (const r in ROLES){ colorTipo.set(r,ROLES[r].color); }
 	}
 	if(app=='people'){

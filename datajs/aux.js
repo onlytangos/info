@@ -3,7 +3,7 @@
 aux.js : datos auxiliares escritos a mano (en datajs/). Antes roles.js y favoritos.js.
 
   - index.htm y wwt/wwt.htm lo cargan con <script>; push.sh lo sube.
-  - import/comun.py (lee_aux) lee "var CAMPO =","var ROLES =",
+  - import/comun.py (lee_aux) lee "var CAMPO =","var TIPOS =","var ROLES =",
     "var ROLES_EQUIVALENCIAS =" y "var favoritos =" como JSON: dentro, comillas dobles y sin comentarios
     (se toleran comas finales). Los comentarios, fuera.
 
@@ -181,6 +181,28 @@ function bajaFichero(nombre,texto,tipo){
   setTimeout(() => URL.revokeObjectURL(a.href),1000);
 }
 
+// ════════════════════════════ TIPOS ════════════════════════════
+
+/*
+TIPOS: tipos de evento (campo tiporol de las filas de eventos) con su color en
+index.htm (app mundo). Es la lista de tipos válidos: comun.py descarta las
+filas de otro tipo. El orden es el de index.htm.
+*/
+
+var TIPOS = {
+  "milonga":            {"color": "#adf5d7"},
+  "venue":              {"color": "#fae3ad"},
+  "event":              {"color": "#e5f9ff"},
+  "event party":        {"color": "#d7f6fa"},
+  "event festival":     {"color": "#c3e8ff"},
+  "event encuentro":    {"color": "#7db1ff"},
+  "event marathon":     {"color": "#acccfc"},
+  "event championship": {"color": "#ff6961"},
+  "event seminar":      {"color": "#d0e0f0"},
+  "academy":            {"color": "#f3d4ff"},
+  "list":               {"color": "#e0d4f7"}
+};
+
 // ════════════════════════════ ROLES ════════════════════════════
 
 
@@ -193,14 +215,16 @@ var ROLES = {
   "djm": {"publico": 1,"desc": "pasa música",              "nombre": "tangoDJ",     "color": "#db94ff","colorPeople": "#db94ff"},
   "wrt": {"publico": 1,"desc": "crea contenido de tango",  "nombre": "writer",      "color": "#f9fea0","colorPeople": "#F9EE90"},
   "tch": {"publico": 1,"desc": "teacher",                  "nombre": "teacher",     "color": "#b3f0e0","colorPeople": "#b3f0e0"},
-  "shp": {"publico": 1,"desc": "tiene tienda",             "nombre": "shopper",     "color": "#d4f5a3","colorPeople": "#d4f5a3"},
+  "shp": {"publico": 1,"desc": "tienda (shop)",            "nombre": "shop",        "color": "#d4f5a3","colorPeople": "#d4f5a3"},
+  "cmt": {"publico": 1,"desc": "comunidad de tango (grupo)","nombre": "comunidad",  "color": "#c8f0f0","colorPeople": "#c8f0f0"},
   "mil": {"publico": 0,"desc": "milonguera bien conocida","nombre": "milonguera",  "color": "#ffccff","colorPeople": "#ffccff"},
   "com": {"publico": 0,"desc": "compañía",                 "nombre": "compañía",    "color": "#ffcccc","colorPeople": "#ffcccc"},
   "vip": {"publico": 0,"desc": "mil+com+inf",              "nombre": "mil+com+inf","color": "#ff9999","colorPeople": "#ff9999"},
   "dan": {"publico": 0,"desc": "dancer regular conocida",  "nombre": "dancer",      "color": "#cfe8ff","colorPeople": "#cfe8ff"},
   "inf": {"publico": 0,"desc": "proveedor de información","nombre": "info",        "color": "#F9AA90","colorPeople": "#F9AA90"},
   "bed": {"publico": 0,"desc": "alojamiento",              "nombre": "alojamiento","color": "#d9f2c4","colorPeople": "#d9f2c4"},
-  "non": {"publico": 0,"desc": "no interesa",              "nombre": "",            "color": "#e0e0e0","colorPeople": "#e0e0e0"}
+  "non": {"publico": 0,"desc": "no interesa",              "nombre": "",            "color": "#e0e0e0","colorPeople": "#e0e0e0"},
+  "plp": {"publico": 0,"desc": "es una persona (no grupo ni local)","nombre": "persona","color": "#f0f0f0","colorPeople": "#f0f0f0"}
 };
 
 /*
