@@ -4,7 +4,7 @@
 <head>
 <meta charset='UTF-8'>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OTI</title>
+<title>TW</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 body{
@@ -220,10 +220,46 @@ a#link{
 	float: none;
 	margin: 0px 0px 8px 0px;
 }
+/* vista anual (también fuera del móvil): una línea por evento; si no cabe en el ancho del listado,
+   el nombre se recorta con ... */
+li.anual{
+	display: flex;
+	align-items: baseline;
+	white-space: nowrap;
+}
+li.anual > span{
+	display: flex;
+	align-items: baseline;
+	min-width: 0;
+}
+li.anual > span > *{
+	flex: none;
+}
+li.anual .nombreAnual, li.anual .dondeAnual{
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+li.anual .nombreAnual{
+	flex: 0 10 auto;   /* se recorta antes el nombre que la ciudad */
+}
+li.anual .dondeAnual{
+	flex: 0 1 auto;
+}
 #resultados{
 	font-family: "Noto Sans Mono", monospace;
 	font-size:12px;
 	margin: 0px 0px 0px 130px;
+}
+/* fuera del móvil, la vista anual sin sangrado: las líneas empiezan junto al panel */
+@media (min-width: 601px) {
+	#resultados.anualUl{
+		margin-left: 168px;
+		padding-left: 0px;
+	}
+	#resultados.anualUl li{
+		margin-left: 0px !important;
+	}
 }
 
 @media (max-width: 600px) {
@@ -279,26 +315,6 @@ a#link{
 	}
 	.cTabla{
 		width: 100%;
-	}
-	/* vista anual: una línea por evento, pegada a la izquierda; el nombre se recorta con ... */
-	li.anual{
-		display: flex;
-		align-items: baseline;
-		white-space: nowrap;
-	}
-	li.anual > span{
-		display: flex;
-		align-items: baseline;
-		min-width: 0;
-	}
-	li.anual > span > *{
-		flex: none;
-	}
-	li.anual .nombreAnual{
-		flex: 0 1 auto;
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
 	}
 	li.anual .stipo3{
 		width: auto;
@@ -368,7 +384,7 @@ function peopleDisponible(){
 function eligeDatos(){
 	if (app=='mundo'){
 		datos=publicEvent.concat(peopleDisponible());
-		titulo1='OnlyTangoInfo';
+		titulo1='TangoWorld';
 		titulo2='<a href="https://www.facebook.com/profile.php?id=100093497583670" target="_blank">by KoKoTango</a>'+
 			'<br><small>'+(typeof privatePeople!='undefined' ? 'private version' : 'public version')+'</small>';
 		for (const t in TIPOS){ colorTipo.set(t,TIPOS[t].color); }
@@ -422,6 +438,14 @@ function inicio(){
 	cargaFavoritos();
 	renderGo();
 	borraParametros();
+	// la línea responsive: al pasar de móvil a no móvil (o al revés) se repinta con su formato
+	const mq=window.matchMedia('(max-width: 600px)');
+	const alCambiarAncho=()=>{
+		const u=document.getElementById('update');
+		if (u){ u.innerHTML=(esMovil() ? 'upd ' : 'update: ')+esc(publicEventFecha); }
+		renderGo();
+	};
+	if (mq.addEventListener){ mq.addEventListener('change',alCambiarAncho); }else{ mq.addListener(alCambiarAncho); }
 }
 
 function setParametrosSelectores(fijo){
@@ -1275,9 +1299,12 @@ function entradaAnual(i){
 	o.estimado=(String(year)!=p[4]);
 	o.ofecha=new Date(year,mes,sinDia ? 1 : dia);
 	o.colorMes=mes;
-	// el mes (2026OCT) va en su propia línea; en la del evento, solo el día
+	// móvil: el mes (2026OCT) va en su propia línea; en la del evento, solo el día
 	o.pmes=o.ofecha.getFullYear()+meses[o.ofecha.getMonth()];
 	o.pdia=(sinDia ? '??' : dia.toString().padStart(2, '0'));
+	// fuera del móvil: el primero del mes con 26.OCT.23; los demás, solo el día, alineado
+	o.pfecha=String(o.ofecha.getFullYear()).slice(2)+'.'+meses[o.ofecha.getMonth()]+'.'+o.pdia;
+	o.pfecha2='&nbsp;'.repeat(7)+o.pdia;
 	return o;
 }
 
@@ -1289,7 +1316,7 @@ function sinFiltro(s){
 	return s=='' || s=='all';
 }
 
-function textoAnual(item){
+function textoAnual(item,primero){
 	let tipo=item.tipo.replace('event ','').trim();
 	if (tipo=='championship'){ tipo='champion'; }
 	// en el móvil el tipo en 3 letras (MAR, FES...) y sin el país: cabe en una línea
@@ -1297,11 +1324,12 @@ function textoAnual(item){
 	const ttipo=movil ? get3(item.tipo) : esc(tipo)+'&nbsp;'.repeat(Math.max(1,10-tipo.length));
 	const stipo=tipo=='' ? '' : '<span class="stipo3" style="color:#444;background-color:'+colorTipo.get(item.tipo)+
 		'">'+ttipo+'</span>';
-	const sfecha='<span class="fechaCompacta" style="background-color:'+COLOR_MES[item.colorMes]+'">&nbsp;'+item.pdia+'&nbsp;</span>';
-	// el nombre entero: en el móvil lo recorta el CSS (li.anual .nombreAnual) solo si no cabe
+	const sfecha='<span class="fechaCompacta" style="background-color:'+COLOR_MES[item.colorMes]+'">'+
+		(movil ? '&nbsp;'+item.pdia : (primero ? item.pfecha : item.pfecha2))+'&nbsp;</span>';
+	// el nombre entero: lo recorta el CSS (li.anual .nombreAnual) solo si no cabe (entero, en el title)
 	const nombre=item.nombre;
-	const snombre='<span class="nombreAnual">'+(iconoFav(item.nombre,item.ciudad)||(favLista.length ? '&nbsp;'.repeat(3) : ''))+esc(nombre)+'</span>';
-	const sdonde='<span>&nbsp;('+esc(item.ciudad)+(movil ? '' : ','+esc(item.pais))+')</span>';
+	const snombre='<span class="nombreAnual" title="'+esc(nombre)+'">'+(iconoFav(item.nombre,item.ciudad)||(favLista.length ? '&nbsp;'.repeat(3) : ''))+esc(nombre)+'</span>';
+	const sdonde='<span class="dondeAnual">&nbsp;('+esc(item.ciudad)+(movil ? '' : ','+esc(item.pais))+')</span>';
 	return sfecha+stipo+'<span>&nbsp;</span>'+snombre+sdonde+
 		(item.estimado ? '<span>&nbsp;<span title="fecha estimada: repite la edición anterior">&#9203;</span></span>' : '');
 }
@@ -1334,12 +1362,13 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 		if (!pasaFav2(item)){continue}
 		filasVisibles.add(item.fila);
 		contadorL1+=1;
-		if (item.pmes!=mesAnterior){ results.appendChild(cabeceraMes(item)); }
+		const primero=(item.pmes!=mesAnterior);
+		if (primero && esMovil()){ results.appendChild(cabeceraMes(item)); }
 		mesAnterior=item.pmes;
 		const li=nuevoLi('20px');
 		li.className='anual';
 		const span=document.createElement('span');
-		item.texto=textoAnual(item);
+		item.texto=textoAnual(item,primero);
 		span.innerHTML=item.texto;
 		li.appendChild(span);
 		if (item.url){agregaEnlace(li,item.url)}
@@ -1352,6 +1381,7 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 function render(s0,s1,s2,s3,s4,s5){
 	let contadorL1;
 	filasVisibles.clear();
+	document.getElementById('resultados').classList.toggle('anualUl',s5=='annual');
 	if (s5=='regular'){
 		contadorL1=renderRegular(s0,s1,s2,s3,s4);
 	}else if (s5=='annual'){
