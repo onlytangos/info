@@ -63,7 +63,7 @@ function textoReg(f){
 }
 
 // ═══════════════ UTILIDADES DE LAS PÁGINAS ═══════════════
-// (app.ti/index.htm, app.wwt/index.htm y app.review2/index.htm)
+// (app.tw/index.htm, app.tg/index.htm y app.tg/admin.htm)
 
 // true si el tipo (campo 4) es de un evento, venue, milonga, academy o list (su primera
 // palabra); si no, es una persona. Única regla para distinguirlos en las
