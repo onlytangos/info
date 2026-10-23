@@ -137,6 +137,10 @@ select{
 	padding-right:6px;
 	padding-left:2px;
 }
+.mesAnual{
+	font-weight: bold;
+	margin-top: 6px;
+}
 .itemLinea{
 	display: inline;
 }
@@ -313,7 +317,7 @@ a#link{
 <script>
 
 const meses=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-const opcionesVistas=['countries','annual','regular'];
+const opcionesVistas=['annual','countries','regular'];
 const opcionesFav=['fav','fav2'];
 
 const fsel0='> all area';
@@ -1269,11 +1273,9 @@ function entradaAnual(i){
 	o.estimado=(String(year)!=p[4]);
 	o.ofecha=new Date(year,mes,sinDia ? 1 : dia);
 	o.colorMes=mes;
-	const pdia=(sinDia ? '??' : dia.toString().padStart(2, '0'));
-	// en el móvil el año con dos cifras: 26.OCT 05
-	const ano=String(o.ofecha.getFullYear()).slice(esMovil() ? 2 : 0);
-	o.pfecha=ano+'.'+meses[o.ofecha.getMonth()]+' '+pdia;
-	o.pfecha2='&nbsp;'.repeat(ano.length+5)+pdia;
+	// el mes (2026OCT) va en su propia línea; en la del evento, solo el día
+	o.pmes=o.ofecha.getFullYear()+meses[o.ofecha.getMonth()];
+	o.pdia=(sinDia ? '??' : dia.toString().padStart(2, '0'));
 	return o;
 }
 
@@ -1285,7 +1287,7 @@ function sinFiltro(s){
 	return s=='' || s=='all';
 }
 
-function textoAnual(item,mismoMes){
+function textoAnual(item){
 	let tipo=item.tipo.replace('event ','').trim();
 	if (tipo=='championship'){ tipo='champion'; }
 	// en el móvil el tipo en 3 letras (MAR, FES...) y sin el país: cabe en una línea
@@ -1293,8 +1295,7 @@ function textoAnual(item,mismoMes){
 	const ttipo=movil ? get3(item.tipo) : esc(tipo)+'&nbsp;'.repeat(Math.max(1,10-tipo.length));
 	const stipo=tipo=='' ? '' : '<span class="stipo3" style="color:#444;background-color:'+colorTipo.get(item.tipo)+
 		'">'+ttipo+'</span>';
-	const sfecha=item.pfecha=='' ? '' : '<span class="fechaCompacta" style="background-color:'+COLOR_MES[item.colorMes]+
-		'">'+(mismoMes ? item.pfecha2 : item.pfecha)+'&nbsp;</span>';
+	const sfecha='<span class="fechaCompacta" style="background-color:'+COLOR_MES[item.colorMes]+'">&nbsp;'+item.pdia+'&nbsp;</span>';
 	let nombre=item.nombre;
 	const corte=window.innerWidth/20;
 	if (nombre.length>corte){ nombre=nombre.substring(0,corte)+' ..'; }
@@ -1302,6 +1303,14 @@ function textoAnual(item,mismoMes){
 	const sdonde='<span>&nbsp;('+esc(item.ciudad)+(movil ? '' : ','+esc(item.pais))+')</span>';
 	return sfecha+stipo+'<span>&nbsp;</span>'+snombre+sdonde+
 		(item.estimado ? '<span>&nbsp;<span title="fecha estimada: repite la edición anterior">&#9203;</span></span>' : '');
+}
+
+function cabeceraMes(item){
+	const li=nuevoLi('20px');
+	li.style.listStyleType='none';
+	li.className='mesAnual';
+	li.innerHTML='<span class="fechaCompacta" style="background-color:'+COLOR_MES[item.colorMes]+'">'+item.pmes+'</span>';
+	return li;
 }
 
 function renderAnnualCompact(s0,s1,s2,s3,s4){
@@ -1315,7 +1324,7 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 	}
 	entradas.sort(function(a, b){return a.ofecha-b.ofecha})
 	const a3=s3.split(',');
-	let contadorL1=0, mesAnterior=-1;
+	let contadorL1=0, mesAnterior='';
 	for (const item of entradas) {
 		if (!sinFiltro(s4) && item.fechas.indexOf(s4)==-1){continue}
 		if (!sinFiltro(s3) && a3.indexOf(item.tipo)==-1){continue}
@@ -1324,11 +1333,12 @@ function renderAnnualCompact(s0,s1,s2,s3,s4){
 		if (!pasaFav2(item)){continue}
 		filasVisibles.add(item.fila);
 		contadorL1+=1;
+		if (item.pmes!=mesAnterior){ results.appendChild(cabeceraMes(item)); }
+		mesAnterior=item.pmes;
 		const li=nuevoLi('20px');
 		li.className='anual';
 		const span=document.createElement('span');
-		item.texto=textoAnual(item,item.colorMes==mesAnterior);
-		mesAnterior=item.colorMes;
+		item.texto=textoAnual(item);
 		span.innerHTML=item.texto;
 		li.appendChild(span);
 		if (item.url){agregaEnlace(li,item.url)}
