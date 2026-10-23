@@ -1296,9 +1296,8 @@ function textoAnual(item){
 	const stipo=tipo=='' ? '' : '<span class="stipo3" style="color:#444;background-color:'+colorTipo.get(item.tipo)+
 		'">'+ttipo+'</span>';
 	const sfecha='<span class="fechaCompacta" style="background-color:'+COLOR_MES[item.colorMes]+'">&nbsp;'+item.pdia+'&nbsp;</span>';
-	let nombre=item.nombre;
-	const corte=window.innerWidth/20;
-	if (nombre.length>corte){ nombre=nombre.substring(0,corte)+' ..'; }
+	// el nombre entero: en el móvil lo recorta el CSS (li.anual .nombreAnual) solo si no cabe
+	const nombre=item.nombre;
 	const snombre='<span class="nombreAnual">'+(iconoFav(item.nombre,item.ciudad)||(favLista.length ? '&nbsp;'.repeat(3) : ''))+esc(nombre)+'</span>';
 	const sdonde='<span>&nbsp;('+esc(item.ciudad)+(movil ? '' : ','+esc(item.pais))+')</span>';
 	return sfecha+stipo+'<span>&nbsp;</span>'+snombre+sdonde+
